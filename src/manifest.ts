@@ -16,14 +16,18 @@ export default defineManifest({
     default_popup: 'src/popup/index.html',
     default_title: 'Repo Trust',
   },
+  // Entry basenames are deliberately distinct (not both `index.ts`): same-named
+  // entries collide on the emitted `index.ts-<hash>.js` chunk and CRXJS can wire
+  // the service-worker loader to the wrong one (loading the content script into
+  // the worker → "window is not defined").
   background: {
-    service_worker: 'src/background/index.ts',
+    service_worker: 'src/background/service-worker.ts',
     type: 'module',
   },
   content_scripts: [
     {
       matches: ['https://github.com/*'],
-      js: ['src/content/index.ts'],
+      js: ['src/content/content-script.ts'],
       run_at: 'document_idle',
     },
   ],
