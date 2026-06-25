@@ -1,6 +1,8 @@
 # 02 — Walking skeleton: scaffold, page detection, card shows owner/repo
 
-Status: ready-for-agent
+Status: done (pending in-browser dogfood QA)
+
+> Toolchain (Vite 8 + CRXJS 2 + TS + Preact), MV3 manifest, 4 entry points, Shadow-DOM card, and the `parseRepoContext` seam (8 tests) are in place; `npm run build` produces a valid MV3 manifest with minimal permissions. Not yet closed: loading the unpacked build in Chromium and visually confirming the card mounts (manual step). Private-repo classification is intentionally deferred to issue 03 (it is an API-time 404, not URL-derivable).
 
 ## Parent
 

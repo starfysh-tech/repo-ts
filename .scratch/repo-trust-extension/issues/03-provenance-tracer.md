@@ -1,6 +1,8 @@
 # 03 — First analysis tracer: Provenance dimension, real API to real state
 
-Status: ready-for-agent
+Status: done (pending in-browser dogfood QA)
+
+> `analyzeRepo` injected-fetch seam + Provenance scorer landed with 10 fixture-driven tests (incl. the hard `is-number`-never-caution assertion). Content script requests analysis from the worker and renders loading / result / private / rate-limited / retryable-error states in the Shadow-DOM card (icon+text, never color alone). `score_version "0.1.0"`. Live browser E2E is the pending manual dogfood step. Confidence is intentionally low for all repos until Security+Transparency land (issue 04).
 
 ## What to build
 
