@@ -70,13 +70,7 @@ function Result({ result }: { result: AnalysisResult }) {
   const reasons = topReasons(result)
   return (
     <div>
-      <header class="card__head">
-        <span class="card__icon" aria-hidden="true">
-          {display.icon}
-        </span>
-        <span class="card__state">{display.label}</span>
-      </header>
-      <p class="card__confidence">{CONFIDENCE_LABEL[result.confidence_state]}</p>
+      <Headline icon={display.icon} label={display.label} sub={CONFIDENCE_LABEL[result.confidence_state]} />
       {reasons.length > 0 && (
         <ul class="card__reasons">
           {reasons.map((r) => (

@@ -40,8 +40,11 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
   const flags: Flag[] = [...provenance.flags]
   const positives = [...provenance.positives]
 
-  const confidence = deriveConfidence(dimensionResults)
-  const trustState = deriveTrustState(dimensionResults, flags, confidence)
+  // Compute the evidenced set once; both confidence and the trust rollup agree
+  // on which dimensions count.
+  const evidenced = dimensionResults.filter((d) => d.dimension_state !== 'unknown')
+  const confidence = deriveConfidence(evidenced.length)
+  const trustState = deriveTrustState(evidenced, flags, confidence)
 
   const result: AnalysisResult = {
     trust_state: trustState,
@@ -58,28 +61,27 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
 /** Confidence = how many of the three planned dimensions produced evidence.
  *  Dimensions not yet evaluated contribute none, so an early version reads as
  *  lower confidence — low evidence, not low trust. */
-function deriveConfidence(dimensions: DimensionResult[]): ConfidenceState {
-  const evidenced = dimensions.filter((d) => d.dimension_state !== 'unknown').length
-  if (evidenced >= PLANNED_DIMENSION_COUNT) return 'high'
-  if (evidenced === PLANNED_DIMENSION_COUNT - 1) return 'medium'
+function deriveConfidence(evidencedCount: number): ConfidenceState {
+  if (evidencedCount >= PLANNED_DIMENSION_COUNT) return 'high'
+  if (evidencedCount === PLANNED_DIMENSION_COUNT - 1) return 'medium'
   return 'low'
 }
 
-/** Deterministic top-level rollup (PRD order):
+/** Deterministic top-level rollup (PRD order); `evidenced` is the set of
+ *  dimensions that produced evidence (state !== 'unknown'):
  *  1. any high-severity flag (archived) → caution
  *  2. low confidence → insufficient_evidence
- *  3. majority of evaluated dimensions strong and no negative flags → strong_signals
+ *  3. majority of evidenced dimensions strong and no negative flags → strong_signals
  *  4. otherwise → mixed_signals */
 function deriveTrustState(
-  dimensions: DimensionResult[],
+  evidenced: DimensionResult[],
   flags: Flag[],
   confidence: ConfidenceState,
 ): TrustState {
   if (flags.some((f) => f.severity === 'high')) return 'caution'
   if (confidence === 'low') return 'insufficient_evidence'
 
-  const evaluated = dimensions.filter((d) => d.dimension_state !== 'unknown')
-  const strong = evaluated.filter((d) => d.dimension_state === 'strong').length
-  if (strong > evaluated.length / 2 && flags.length === 0) return 'strong_signals'
+  const strong = evidenced.filter((d) => d.dimension_state === 'strong').length
+  if (strong > evidenced.length / 2 && flags.length === 0) return 'strong_signals'
   return 'mixed_signals'
 }

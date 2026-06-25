@@ -1,4 +1,4 @@
-import { render } from 'preact'
+import { mountApp, SURFACE_COLOR, SURFACE_FONT } from '../shared/ui'
 
 // Skeleton popup: a watchlist shortcut and a neutral message. The current-page
 // trust state and quick actions land in issue 06.
@@ -7,7 +7,7 @@ function Popup() {
     chrome.tabs.create({ url: chrome.runtime.getURL('src/watchlist/index.html') })
   }
   return (
-    <main style="width:260px;padding:14px;font-family:system-ui,-apple-system,sans-serif;color:#1f2328">
+    <main style={`width:260px;padding:14px;font-family:${SURFACE_FONT};color:${SURFACE_COLOR}`}>
       <h1 style="font-size:14px;margin:0 0 6px">Repo Trust</h1>
       <p style="font-size:12px;color:#57606a;margin:0 0 12px">
         Open a public GitHub repository to see its trust signals.
@@ -19,5 +19,4 @@ function Popup() {
   )
 }
 
-const root = document.getElementById('app')
-if (root) render(<Popup />, root)
+mountApp(<Popup />)

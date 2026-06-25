@@ -22,7 +22,10 @@ export function scoreProvenance(
 ): DimensionContribution {
   const flags: Flag[] = []
   const positives: PositiveSignal[] = []
-  const triggered: string[] = []
+  // Signals that carry no flag/positive object (downgrades / context). The rest
+  // of `triggered_signals` is derived from the flag and positive keys below, so
+  // a signal can never appear in evidence without its flag/positive (or vice versa).
+  const keyless: string[] = []
 
   const hasLicense = repo.license != null
   const isOrg = repo.owner.type === 'Organization'
@@ -34,27 +37,24 @@ export function scoreProvenance(
 
   if (repo.archived) {
     flags.push({ key: 'archived', severity: 'high', label: 'Repository is archived' })
-    triggered.push('archived')
   }
   if (hasLicense) {
     positives.push({ key: 'license-present', label: `Licensed (${repo.license!.spdx_id ?? repo.license!.key})` })
-    triggered.push('license-present')
   } else {
     flags.push({ key: 'license-missing', severity: 'medium', label: 'No license detected' })
-    triggered.push('license-missing')
   }
   if (isOrg) {
     positives.push({ key: 'org-owned', label: 'Organization-owned' })
-    triggered.push('org-owned')
   } else {
-    triggered.push('personal-account')
+    keyless.push('personal-account')
   }
   if (established) {
     positives.push({ key: 'established', label: 'Established history' })
-    triggered.push('established')
   }
-  if (veryNew) triggered.push('very-new')
-  if (dormant) triggered.push('dormant')
+  if (veryNew) keyless.push('very-new')
+  if (dormant) keyless.push('dormant')
+
+  const triggered = [...flags.map((f) => f.key), ...positives.map((p) => p.key), ...keyless]
 
   const evidenceLinks = [
     { label: 'Repository', url: `https://github.com/${target.owner}/${target.repo}` },
