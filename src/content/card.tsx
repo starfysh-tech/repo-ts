@@ -3,7 +3,17 @@ import type { SupportedRepo } from './parseRepoContext'
 import type { AnalysisResult, DimensionResult } from '../engine/types'
 import { recencyLabel } from './recency'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
-import { CONFIDENCE_LABEL, DIM_DISPLAY, DIM_TITLE, TRUST_DISPLAY, verdictSummary } from '../shared/display'
+import type { ConfidenceState } from '../engine/types'
+import {
+  CONFIDENCE_FILL,
+  CONFIDENCE_LABEL,
+  DIM_ACCENT,
+  DIM_DISPLAY,
+  DIM_TITLE,
+  TRUST_ACCENT,
+  TRUST_DISPLAY,
+  verdictSummary,
+} from '../shared/display'
 
 // The states the in-page card can render. The content script drives the
 // transitions: loading → result | private | rate_limited | error.
@@ -19,8 +29,10 @@ export type CardState =
 const DEFERRED_DIMENSIONS = ['Release discipline', 'Governance', 'Supply chain', 'Responsiveness']
 
 export function TrustCard({ state }: { state: CardState }) {
+  // Trust-colored top accent (neutral for the non-verdict states).
+  const accent = state.kind === 'result' ? TRUST_ACCENT[state.result.trust_state] : '#6e7781'
   return (
-    <section class="card" role="region" aria-label="Repo Trust summary">
+    <section class="card" role="region" aria-label="Repo Trust summary" style={`--accent:${accent}`}>
       {renderBody(state)}
       <p class="card__repo">
         {state.target.owner}/{state.target.repo}
@@ -108,10 +120,28 @@ function Result({ result, target }: { result: AnalysisResult; target: SupportedR
       >
         {watched ? '★' : '☆'}
       </button>
-      <Headline icon={display.icon} label={display.label} sub={CONFIDENCE_LABEL[result.confidence_state]} />
+      <Headline icon={display.icon} label={display.label} />
+      <ConfidenceMeter level={result.confidence_state} />
       <p class="card__takeaway">{verdictSummary(result)}</p>
       <p class="card__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
       <Details result={result} />
+    </div>
+  )
+}
+
+// Confidence shown as a segmented meter — kept visually NEUTRAL (not the trust
+// accent) so confidence reads as separate from trust, per the product rules.
+// The text label remains for color-independent meaning.
+function ConfidenceMeter({ level }: { level: ConfidenceState }) {
+  const filled = CONFIDENCE_FILL[level]
+  return (
+    <div class="card__confidence">
+      <span class="meter" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <span class={i < filled ? 'meter__seg meter__seg--on' : 'meter__seg'} key={i} />
+        ))}
+      </span>
+      <span>{CONFIDENCE_LABEL[level]}</span>
     </div>
   )
 }
@@ -167,9 +197,13 @@ function DimensionRow({ dim }: { dim: DimensionResult }) {
   return (
     <div class="details__dim">
       <div class="details__dim-head">
-        <span aria-hidden="true">{s.icon}</span>
+        <span aria-hidden="true" style={`color:${DIM_ACCENT[dim.dimension_state]}`}>
+          {s.icon}
+        </span>
         <strong>{DIM_TITLE[dim.dimension_key]}</strong>
-        <span class="details__dim-state">{s.label}</span>
+        <span class="details__dim-state" style={`color:${DIM_ACCENT[dim.dimension_state]}`}>
+          {s.label}
+        </span>
       </div>
       <p class="details__dim-rationale">{segments}</p>
       {chips.length > 0 && (

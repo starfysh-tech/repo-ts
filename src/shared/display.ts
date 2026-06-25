@@ -22,6 +22,26 @@ export const CONFIDENCE_LABEL: Record<ConfidenceState, string> = {
   low: 'Low confidence',
 }
 
+// Accent colors are SUPPLEMENTARY — the icon and text label always carry the
+// state, so the UI never depends on color alone. Tuned to be conservative
+// (caution is a warm severe, not an alarm red).
+export const TRUST_ACCENT: Record<TrustState, string> = {
+  strong_signals: '#1a7f37',
+  mixed_signals: '#9a6700',
+  caution: '#bc4c00',
+  insufficient_evidence: '#6e7781',
+}
+
+export const DIM_ACCENT: Record<DimensionState, string> = {
+  strong: '#1a7f37',
+  mixed: '#9a6700',
+  weak: '#bc4c00',
+  unknown: '#6e7781',
+}
+
+/** How many of the 3 confidence-meter segments are filled. */
+export const CONFIDENCE_FILL: Record<ConfidenceState, number> = { high: 3, medium: 2, low: 1 }
+
 // Safe accessor: watchlist rows render from stored snapshots (untrusted at read
 // time — could be corrupted or from a future schema), so an unexpected
 // trust_state must degrade to a label, not crash the render.

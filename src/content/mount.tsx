@@ -10,21 +10,25 @@ const STYLES = `
   .card {
     position: relative;
     font-family: system-ui, -apple-system, sans-serif;
-    width: 248px;
-    padding: 12px 14px;
+    width: 260px;
+    padding: 13px 15px;
     border: 1px solid rgba(0,0,0,0.12);
+    border-top: 3px solid var(--accent, #6e7781);
     border-radius: 10px;
     background: #fff;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.14);
     color: #1f2328;
     max-height: calc(100vh - 96px);
     overflow-y: auto;
   }
   .card__head { display: flex; align-items: center; gap: 8px; padding-right: 24px; }
-  .card__icon { font-size: 14px; }
-  .card__state { font-size: 14px; font-weight: 600; }
-  .card__confidence { margin: 4px 0 0; font-size: 12px; color: #57606a; }
-  .card__takeaway { margin: 6px 0 0; font-size: 12px; line-height: 1.4; }
+  .card__icon { font-size: 16px; color: var(--accent, inherit); }
+  .card__state { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .card__confidence { display: flex; align-items: center; gap: 7px; margin: 7px 0 0; font-size: 12px; color: #57606a; }
+  .meter { display: inline-flex; gap: 2px; }
+  .meter__seg { width: 16px; height: 5px; border-radius: 2px; background: rgba(0,0,0,0.12); }
+  .meter__seg--on { background: #57606a; }
+  .card__takeaway { margin: 8px 0 0; font-size: 12px; line-height: 1.45; }
   .card__recency { margin: 4px 0 0; font-size: 11px; color: #8b949e; }
   .card__save {
     position: absolute; top: 8px; right: 10px;
@@ -58,6 +62,8 @@ const STYLES = `
     .card__details { border-top-color: rgba(255,255,255,0.12); }
     .details__links a { color: #4493f8; }
     .details__deferred { color: #6e7681; }
+    .meter__seg { background: rgba(255,255,255,0.16); }
+    .meter__seg--on { background: #9198a1; }
   }
 `
 
