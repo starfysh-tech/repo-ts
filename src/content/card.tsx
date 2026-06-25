@@ -9,6 +9,7 @@ import type {
   TrustState,
 } from '../engine/types'
 import { recencyLabel } from './recency'
+import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
 
 // The states the in-page card can render. The content script drives the
 // transitions: loading → result | private | rate_limited | error.
@@ -88,15 +89,37 @@ function renderBody(state: CardState) {
         </div>
       )
     case 'result':
-      return <Result result={state.result} />
+      return <Result result={state.result} target={state.target} />
   }
 }
 
-function Result({ result }: { result: AnalysisResult }) {
+function Result({ result, target }: { result: AnalysisResult; target: SupportedRepo }) {
   const display = TRUST_DISPLAY[result.trust_state]
   const reasons = topReasons(result)
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+
+  // Reflect the saved state, and keep the toggle obvious and reversible.
+  const [watched, setWatched] = useState(false)
+  useEffect(() => {
+    let live = true
+    isWatched(target).then((w) => {
+      if (live) setWatched(w)
+    })
+    return () => {
+      live = false
+    }
+  }, [target])
+
+  const toggleWatch = async () => {
+    if (watched) {
+      await removeFromWatchlist(target.owner, target.repo)
+      setWatched(false)
+    } else {
+      await saveToWatchlist(target, result)
+      setWatched(true)
+    }
+  }
 
   // Closing always returns focus to the trigger, so a keyboard user never loses
   // their place (drawer Escape and Close both route through here). Memoized so
@@ -123,15 +146,20 @@ function Result({ result }: { result: AnalysisResult }) {
           ))}
         </ul>
       )}
-      <button
-        type="button"
-        class="card__details-btn"
-        ref={triggerRef}
-        aria-expanded={open}
-        onClick={() => (open ? close() : setOpen(true))}
-      >
-        {open ? 'Hide details' : 'View details'}
-      </button>
+      <div class="card__actions">
+        <button
+          type="button"
+          class="card__details-btn"
+          ref={triggerRef}
+          aria-expanded={open}
+          onClick={() => (open ? close() : setOpen(true))}
+        >
+          {open ? 'Hide details' : 'View details'}
+        </button>
+        <button type="button" class="card__details-btn" aria-pressed={watched} onClick={toggleWatch}>
+          {watched ? 'Saved ✓' : 'Save'}
+        </button>
+      </div>
       {open && <Drawer result={result} onClose={close} />}
     </div>
   )
