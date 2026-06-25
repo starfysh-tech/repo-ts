@@ -1,5 +1,6 @@
 import type { SupportedRepo } from './parseRepoContext'
 import type { AnalysisResult, ConfidenceState, TrustState } from '../engine/types'
+import { recencyLabel } from './recency'
 
 // The states the in-page card can render. The content script drives the
 // transitions: loading → result | private | rate_limited | error.
@@ -71,6 +72,7 @@ function Result({ result }: { result: AnalysisResult }) {
   return (
     <div>
       <Headline icon={display.icon} label={display.label} sub={CONFIDENCE_LABEL[result.confidence_state]} />
+      <p class="card__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
       {reasons.length > 0 && (
         <ul class="card__reasons">
           {reasons.map((r) => (

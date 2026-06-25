@@ -21,6 +21,7 @@ const STYLES = `
   .card__icon { font-size: 14px; }
   .card__state { font-size: 14px; font-weight: 600; }
   .card__confidence { margin: 4px 0 0; font-size: 12px; color: #57606a; }
+  .card__recency { margin: 2px 0 0; font-size: 11px; color: #8b949e; }
   .card__reasons { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
   .card__reason { display: flex; align-items: baseline; gap: 8px; font-size: 12px; }
   .card__reason-icon { font-size: 11px; width: 12px; flex: none; }
@@ -31,7 +32,7 @@ const STYLES = `
   .card__repo { margin: 10px 0 0; font-size: 11px; color: #57606a; word-break: break-all; }
   @media (prefers-color-scheme: dark) {
     .card { background: #161b22; border-color: rgba(255,255,255,0.12); color: #e6edf3; }
-    .card__confidence, .card__repo { color: #9198a1; }
+    .card__confidence, .card__repo, .card__recency { color: #9198a1; }
     .card__retry { border-color: rgba(255,255,255,0.24); }
   }
 `
