@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { SupportedRepo } from './parseRepoContext'
-import type {
-  AnalysisResult,
-  ConfidenceState,
-  DimensionKey,
-  DimensionResult,
-  DimensionState,
-  TrustState,
-} from '../engine/types'
+import type { AnalysisResult, DimensionKey, DimensionResult, DimensionState } from '../engine/types'
 import { recencyLabel } from './recency'
+import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
+import { CONFIDENCE_LABEL, TRUST_DISPLAY } from '../shared/display'
 
 // The states the in-page card can render. The content script drives the
 // transitions: loading → result | private | rate_limited | error.
@@ -19,23 +14,7 @@ export type CardState =
   | { kind: 'private'; target: SupportedRepo }
   | { kind: 'rate_limited'; target: SupportedRepo; resetAt: number }
 
-// Conservative vocabulary only (per CLAUDE.md product rules): never
-// "safe"/"trusted"/"dangerous". Every state carries an icon AND a text label,
-// so it is never conveyed by color alone.
-const TRUST_DISPLAY: Record<TrustState, { icon: string; label: string }> = {
-  strong_signals: { icon: '✓', label: 'Strong signals' },
-  mixed_signals: { icon: '◐', label: 'Mixed signals' },
-  caution: { icon: '▲', label: 'Caution' },
-  insufficient_evidence: { icon: '?', label: 'Limited evidence' },
-}
-
-const CONFIDENCE_LABEL: Record<ConfidenceState, string> = {
-  high: 'High confidence',
-  medium: 'Medium confidence',
-  low: 'Low confidence',
-}
-
-// Per-dimension state, again conveyed with icon AND text (never color alone).
+// Per-dimension state, conveyed with icon AND text (never color alone).
 const DIM_DISPLAY: Record<DimensionState, { icon: string; label: string }> = {
   strong: { icon: '✓', label: 'Strong' },
   mixed: { icon: '◐', label: 'Mixed' },
@@ -88,15 +67,48 @@ function renderBody(state: CardState) {
         </div>
       )
     case 'result':
-      return <Result result={state.result} />
+      return <Result result={state.result} target={state.target} />
   }
 }
 
-function Result({ result }: { result: AnalysisResult }) {
+function Result({ result, target }: { result: AnalysisResult; target: SupportedRepo }) {
   const display = TRUST_DISPLAY[result.trust_state]
   const reasons = topReasons(result)
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+
+  // Reflect the saved state, and keep the toggle obvious and reversible.
+  const [watched, setWatched] = useState(false)
+  const [pending, setPending] = useState(false)
+  useEffect(() => {
+    let live = true
+    isWatched(target)
+      .then((w) => {
+        if (live) setWatched(w)
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [target])
+
+  // Guard against rapid double-clicks: storage writes are non-atomic, so one
+  // toggle must finish before the next can start.
+  const toggleWatch = async () => {
+    if (pending) return
+    setPending(true)
+    try {
+      if (watched) {
+        await removeFromWatchlist(target.owner, target.repo)
+        setWatched(false)
+      } else {
+        await saveToWatchlist(target, result)
+        setWatched(true)
+      }
+    } finally {
+      setPending(false)
+    }
+  }
 
   // Closing always returns focus to the trigger, so a keyboard user never loses
   // their place (drawer Escape and Close both route through here). Memoized so
@@ -123,15 +135,26 @@ function Result({ result }: { result: AnalysisResult }) {
           ))}
         </ul>
       )}
-      <button
-        type="button"
-        class="card__details-btn"
-        ref={triggerRef}
-        aria-expanded={open}
-        onClick={() => (open ? close() : setOpen(true))}
-      >
-        {open ? 'Hide details' : 'View details'}
-      </button>
+      <div class="card__actions">
+        <button
+          type="button"
+          class="card__details-btn"
+          ref={triggerRef}
+          aria-expanded={open}
+          onClick={() => (open ? close() : setOpen(true))}
+        >
+          {open ? 'Hide details' : 'View details'}
+        </button>
+        <button
+          type="button"
+          class="card__details-btn"
+          aria-pressed={watched}
+          disabled={pending}
+          onClick={toggleWatch}
+        >
+          {watched ? 'Saved ✓' : 'Save'}
+        </button>
+      </div>
       {open && <Drawer result={result} onClose={close} />}
     </div>
   )

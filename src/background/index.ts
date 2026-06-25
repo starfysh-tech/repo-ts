@@ -7,12 +7,15 @@ import type { SupportedRepo } from '../content/parseRepoContext'
 
 // Background service worker — the single owner of fetch, scoring, caching, and
 // rate-limit management.
-async function handleAnalyze(target: SupportedRepo): Promise<AnalysisOutcome> {
+async function handleAnalyze(target: SupportedRepo, refresh: boolean): Promise<AnalysisOutcome> {
   const now = new Date()
 
-  // Serve a fresh cached analysis with zero API calls (protects the 60/hr budget).
-  const cached = await readCache(target, now)
-  if (cached) return { status: 'ok', result: cached }
+  // Serve a fresh cached analysis with zero API calls (protects the 60/hr
+  // budget) — unless this is an explicit per-row refresh, which forces new data.
+  if (!refresh) {
+    const cached = await readCache(target, now)
+    if (cached) return { status: 'ok', result: cached }
+  }
 
   const outcome = await analyzeRepo(
     { fetchRepo: fetchRepoLive, fetchCommunityProfile: fetchCommunityProfileLive, now },
@@ -26,7 +29,7 @@ chrome.runtime.onMessage.addListener(
   (message: AnalyzeRequest, _sender, sendResponse: (outcome: AnalysisOutcome) => void) => {
     if (message?.type !== 'analyze') return undefined
 
-    handleAnalyze(message.target)
+    handleAnalyze(message.target, message.refresh ?? false)
       .then(sendResponse)
       .catch(() => sendResponse({ status: 'error' }))
 

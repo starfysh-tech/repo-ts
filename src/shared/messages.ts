@@ -6,12 +6,17 @@ import type { AnalysisOutcome } from '../engine/types'
 export interface AnalyzeRequest {
   type: 'analyze'
   target: SupportedRepo
+  /** Bypass the cache and force a fresh analysis (the watchlist's per-row refresh). */
+  refresh?: boolean
 }
 
-/** Sent from the content script; the worker replies with an AnalysisOutcome.
- *  Resolves `undefined` if the worker never responds (e.g. the service worker is
- *  torn down mid-flight), so callers must guard. */
-export function requestAnalysis(target: SupportedRepo): Promise<AnalysisOutcome | undefined> {
-  const message: AnalyzeRequest = { type: 'analyze', target }
+/** Sent from the content script / popup / watchlist; the worker replies with an
+ *  AnalysisOutcome. Resolves `undefined` if the worker never responds (e.g. the
+ *  service worker is torn down mid-flight), so callers must guard. */
+export function requestAnalysis(
+  target: SupportedRepo,
+  refresh = false,
+): Promise<AnalysisOutcome | undefined> {
+  const message: AnalyzeRequest = { type: 'analyze', target, refresh }
   return chrome.runtime.sendMessage(message) as Promise<AnalysisOutcome | undefined>
 }

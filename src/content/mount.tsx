@@ -30,10 +30,12 @@ const STYLES = `
     border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit;
   }
   .card__repo { margin: 10px 0 0; font-size: 11px; color: #57606a; word-break: break-all; }
+  .card__actions { display: flex; gap: 8px; margin-top: 10px; }
   .card__details-btn {
-    margin-top: 10px; font-size: 12px; padding: 4px 10px; cursor: pointer;
+    font-size: 12px; padding: 4px 10px; cursor: pointer;
     border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit;
   }
+  .drawer .card__details-btn { margin-top: 8px; }
   .drawer {
     margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1);
     max-height: 320px; overflow-y: auto;

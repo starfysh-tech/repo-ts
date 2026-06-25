@@ -8,7 +8,9 @@ export default defineManifest({
   name: 'Repo Trust',
   version: '0.1.0',
   description: 'Explainable trust signals on public GitHub repository pages.',
-  permissions: ['storage'],
+  // `activeTab` lets the popup read the current tab's URL (granted on the user's
+  // action click); narrower than `tabs`, which would expose every tab.
+  permissions: ['storage', 'activeTab'],
   host_permissions: ['https://github.com/*', 'https://api.github.com/*'],
   action: {
     default_popup: 'src/popup/index.html',

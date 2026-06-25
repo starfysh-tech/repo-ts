@@ -1,6 +1,8 @@
 # 06 — Watchlist and popup
 
-Status: ready-for-agent
+Status: done (pending in-browser dogfood QA)
+
+> Watchlist store in `chrome.storage.local` (saved snapshots; pure upsert/remove/hasEntry unit-tested). Reversible Save toggle on the card AND popup. Watchlist page renders snapshots instantly with no network on open — trust state + live recency per row, manual per-row Refresh (forces fresh via a cache-bypass `refresh` flag; no bulk/auto), Remove, and an empty state. Popup reads the active tab (`activeTab` permission) → current-page trust state + Save, "no supported repository detected" elsewhere, + watchlist shortcut. No account, no telemetry. Browser dogfood (save/refresh/remove round-trips, popup on/off a repo) is the pending manual step.
 
 ## What to build
 
