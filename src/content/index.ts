@@ -9,18 +9,23 @@ const POLL_MS = 400
 
 // owner/repo of the currently mounted card, or null when nothing is mounted.
 let mountedKey: string | null = null
+// Monotonic token gating which analysis may render. Bumped whenever a new
+// analysis starts or the card is torn down, so any in-flight analysis that has
+// been superseded (a navigation, a retry, an A->B->A re-entry) is dropped.
+let currentToken = 0
 let syncTimer: ReturnType<typeof setTimeout> | undefined
 
 const keyOf = (target: SupportedRepo) => `${target.owner}/${target.repo}`
 
 async function analyze(target: SupportedRepo): Promise<void> {
-  const key = keyOf(target)
+  // Key the staleness check on the token, not owner/repo: two analyses for the
+  // SAME repo (a Retry, or an A->B->A re-entry) must not let an older/errored
+  // response overwrite a newer one — only the latest analysis renders.
+  const token = ++currentToken
   showCard({ kind: 'loading', target })
 
   const outcome = await requestAnalysis(target).catch(() => undefined)
-  // A rapid navigation may have moved us on while this was in flight; drop the
-  // stale result rather than render it over the new repo's card.
-  if (key !== mountedKey) return
+  if (token !== currentToken) return
 
   if (!outcome || outcome.status === 'error') {
     showCard({ kind: 'error', target, onRetry: () => void analyze(target) })
@@ -45,6 +50,7 @@ function sync(): void {
   if (context.kind !== 'repo') {
     // Reached a non-repo / unsupported page — tear the card down cleanly.
     if (mountedKey !== null) {
+      currentToken++ // invalidate any in-flight analysis so it can't paint here
       hideCard()
       mountedKey = null
     }
@@ -67,9 +73,11 @@ function scheduleSync(): void {
 }
 
 // GitHub transitions between repos/subpages client-side (Turbo) without a full
-// reload. Watch nav events for snappiness, plus a location poll as a robust
-// fallback — a content script runs in an isolated world and can't observe the
-// page's own pushState/replaceState, but `location` reflects the live URL.
+// reload. The 400ms location poll is the SOURCE OF TRUTH: a content script runs
+// in an isolated world and can't observe the page's own pushState, but
+// `location` reflects the live URL. popstate + Turbo events are a best-effort
+// snappiness optimization (GitHub may rename/remove them) and must not be relied
+// on alone — do not remove the poll. All funnel through a debounced sync().
 function installNavigationWatch(): void {
   let lastHref = location.href
 
