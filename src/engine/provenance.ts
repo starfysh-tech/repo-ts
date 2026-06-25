@@ -100,7 +100,7 @@ function rationale(p: {
   archived: boolean
   veryNew: boolean
 }): string {
-  if (p.archived) return 'Archived and no longer maintained.'
+  if (p.archived) return 'Archived by its owner (read-only).'
   const parts: string[] = []
   parts.push(p.hasLicense ? 'Licensed' : 'no license detected')
   parts.push(p.isOrg ? 'organization-owned' : 'personal-account-owned')
