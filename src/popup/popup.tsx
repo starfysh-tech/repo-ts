@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { mountApp, SURFACE_COLOR, SURFACE_FONT, SURFACE_MUTED } from '../shared/ui'
 import { parseRepoContext, type SupportedRepo } from '../content/parseRepoContext'
 import { requestAnalysis } from '../shared/messages'
-import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
+import { useWatchToggle } from '../shared/useWatchToggle'
 import { TRUST_ACCENT, trustDisplay, verdictSummary } from '../shared/display'
 import { ConfidenceMeter } from '../shared/ConfidenceMeter'
 import { TrustDetails } from '../shared/TrustDetails'
@@ -130,35 +130,7 @@ function RepoView({ target, outcome }: { target: SupportedRepo; outcome: Analysi
 }
 
 function SaveButton({ target, result }: { target: SupportedRepo; result: AnalysisResult }) {
-  const [watched, setWatched] = useState(false)
-  const [pending, setPending] = useState(false)
-  useEffect(() => {
-    let live = true
-    isWatched(target)
-      .then((w) => live && setWatched(w))
-      .catch(() => {})
-    return () => {
-      live = false
-    }
-  }, [target])
-
-  // Guard against rapid double-clicks (non-atomic storage writes).
-  const toggle = async () => {
-    if (pending) return
-    setPending(true)
-    try {
-      if (watched) {
-        await removeFromWatchlist(target.owner, target.repo)
-        setWatched(false)
-      } else {
-        await saveToWatchlist(target, result)
-        setWatched(true)
-      }
-    } finally {
-      setPending(false)
-    }
-  }
-
+  const { watched, pending, toggle } = useWatchToggle(target, result)
   return (
     <div class="pp__actions">
       <button type="button" aria-pressed={watched} disabled={pending} onClick={toggle}>

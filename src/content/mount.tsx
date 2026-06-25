@@ -24,8 +24,8 @@ const STYLES = `
   .card__head { display: flex; align-items: center; gap: 8px; padding-right: 24px; }
   .card__icon { font-size: 16px; color: var(--accent, inherit); }
   .card__state { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .card__sub { margin: 4px 0 0; font-size: 12px; color: #57606a; }
   .meter-row { display: flex; align-items: center; gap: 7px; margin: 7px 0 0; font-size: 12px; color: #57606a; }
-  .meter-row__label { font-size: 12px; }
   .meter { display: inline-flex; gap: 2px; }
   .meter__seg { width: 16px; height: 5px; border-radius: 2px; background: rgba(0,0,0,0.12); }
   .meter__seg--on { background: #57606a; }
@@ -61,7 +61,7 @@ const STYLES = `
   .details__deferred { margin: 0; padding-left: 16px; font-size: 11px; color: #8b949e; }
   @media (prefers-color-scheme: dark) {
     .card { background: #161b22; border-color: rgba(255,255,255,0.12); color: #e6edf3; }
-    .meter-row, .card__repo, .card__recency,
+    .meter-row, .card__sub, .card__repo, .card__recency,
     .dim__rationale, .details__subtitle { color: #9198a1; }
     .card__retry { border-color: rgba(255,255,255,0.24); }
     .details { border-top-color: rgba(255,255,255,0.12); }

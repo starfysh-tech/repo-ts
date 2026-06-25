@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'preact/hooks'
 import type { SupportedRepo } from './parseRepoContext'
 import type { AnalysisResult } from '../engine/types'
 import { recencyLabel } from './recency'
-import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
+import { useWatchToggle } from '../shared/useWatchToggle'
 import { ConfidenceMeter } from '../shared/ConfidenceMeter'
 import { TrustDetails } from '../shared/TrustDetails'
 import { TRUST_ACCENT, TRUST_DISPLAY, verdictSummary } from '../shared/display'
@@ -59,39 +58,7 @@ function renderBody(state: CardState) {
 
 function Result({ result, target }: { result: AnalysisResult; target: SupportedRepo }) {
   const display = TRUST_DISPLAY[result.trust_state]
-
-  // Saved state — reflected by a corner icon, reversible.
-  const [watched, setWatched] = useState(false)
-  const [pending, setPending] = useState(false)
-  useEffect(() => {
-    let live = true
-    isWatched(target)
-      .then((w) => {
-        if (live) setWatched(w)
-      })
-      .catch(() => {})
-    return () => {
-      live = false
-    }
-  }, [target])
-
-  // Guard against rapid double-clicks: storage writes are non-atomic, so one
-  // toggle must finish before the next can start.
-  const toggleWatch = async () => {
-    if (pending) return
-    setPending(true)
-    try {
-      if (watched) {
-        await removeFromWatchlist(target.owner, target.repo)
-        setWatched(false)
-      } else {
-        await saveToWatchlist(target, result)
-        setWatched(true)
-      }
-    } finally {
-      setPending(false)
-    }
-  }
+  const { watched, pending, toggle: toggleWatch } = useWatchToggle(target, result)
 
   return (
     <div>
@@ -126,7 +93,7 @@ function Headline({ icon, label, sub }: { icon: string; label: string; sub?: str
         </span>
         <span class="card__state">{label}</span>
       </header>
-      {sub && <p class="card__confidence">{sub}</p>}
+      {sub && <p class="card__sub">{sub}</p>}
     </div>
   )
 }
