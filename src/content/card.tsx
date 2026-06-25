@@ -1,19 +1,11 @@
 import { useEffect, useState } from 'preact/hooks'
 import type { SupportedRepo } from './parseRepoContext'
-import type { AnalysisResult, DimensionResult } from '../engine/types'
+import type { AnalysisResult } from '../engine/types'
 import { recencyLabel } from './recency'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
-import type { ConfidenceState } from '../engine/types'
-import {
-  CONFIDENCE_FILL,
-  CONFIDENCE_LABEL,
-  DIM_ACCENT,
-  DIM_DISPLAY,
-  DIM_TITLE,
-  TRUST_ACCENT,
-  TRUST_DISPLAY,
-  verdictSummary,
-} from '../shared/display'
+import { ConfidenceMeter } from '../shared/ConfidenceMeter'
+import { DimensionRow } from '../shared/DimensionRow'
+import { TRUST_ACCENT, TRUST_DISPLAY, verdictSummary } from '../shared/display'
 
 // The states the in-page card can render. The content script drives the
 // transitions: loading → result | private | rate_limited | error.
@@ -129,23 +121,6 @@ function Result({ result, target }: { result: AnalysisResult; target: SupportedR
   )
 }
 
-// Confidence shown as a segmented meter — kept visually NEUTRAL (not the trust
-// accent) so confidence reads as separate from trust, per the product rules.
-// The text label remains for color-independent meaning.
-function ConfidenceMeter({ level }: { level: ConfidenceState }) {
-  const filled = CONFIDENCE_FILL[level]
-  return (
-    <div class="card__confidence">
-      <span class="meter" aria-hidden="true">
-        {[0, 1, 2].map((i) => (
-          <span class={i < filled ? 'meter__seg meter__seg--on' : 'meter__seg'} key={i} />
-        ))}
-      </span>
-      <span>{CONFIDENCE_LABEL[level]}</span>
-    </div>
-  )
-}
-
 // The per-dimension breakdown, shown directly on the card (no expand): each
 // evaluated dimension's state + evidence-first rationale + evidence links, plus
 // the deferred dimensions marked "not evaluated".
@@ -163,61 +138,6 @@ function Details({ result }: { result: AnalysisResult }) {
         ))}
       </ul>
     </section>
-  )
-}
-
-function DimensionRow({ dim }: { dim: DimensionResult }) {
-  const s = DIM_DISPLAY[dim.dimension_state]
-  // Inline any evidence link whose label is named in the rationale (e.g. the
-  // "README" link folds into "Has a README"); links not named (Repository,
-  // @owner) render as trailing chips. Avoids saying the same word twice.
-  const inlined = new Set<string>()
-  const segments: (string | preact.JSX.Element)[] = [dim.rationale_summary]
-  for (const link of dim.evidence_links) {
-    for (let i = 0; i < segments.length; i++) {
-      const seg = segments[i]
-      if (typeof seg === 'string' && seg.includes(link.label)) {
-        const at = seg.indexOf(link.label)
-        segments.splice(
-          i,
-          1,
-          seg.slice(0, at),
-          <a href={link.url} target="_blank" rel="noopener noreferrer">
-            {link.label}
-          </a>,
-          seg.slice(at + link.label.length),
-        )
-        inlined.add(link.url)
-        break
-      }
-    }
-  }
-  const chips = dim.evidence_links.filter((l) => !inlined.has(l.url))
-
-  return (
-    <div class="details__dim">
-      <div class="details__dim-head">
-        <span aria-hidden="true" style={`color:${DIM_ACCENT[dim.dimension_state]}`}>
-          {s.icon}
-        </span>
-        <strong>{DIM_TITLE[dim.dimension_key]}</strong>
-        <span class="details__dim-state" style={`color:${DIM_ACCENT[dim.dimension_state]}`}>
-          {s.label}
-        </span>
-      </div>
-      <p class="details__dim-rationale">{segments}</p>
-      {chips.length > 0 && (
-        <ul class="details__links">
-          {chips.map((link) => (
-            <li key={link.url}>
-              <a href={link.url} target="_blank" rel="noopener noreferrer">
-                {link.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   )
 }
 

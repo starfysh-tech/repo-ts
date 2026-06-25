@@ -3,29 +3,55 @@ import { mountApp, SURFACE_COLOR, SURFACE_FONT, SURFACE_MUTED } from '../shared/
 import { parseRepoContext, type SupportedRepo } from '../content/parseRepoContext'
 import { requestAnalysis } from '../shared/messages'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
-import { CONFIDENCE_LABEL, DIM_DISPLAY, DIM_TITLE, trustDisplay } from '../shared/display'
+import { TRUST_ACCENT, trustDisplay, verdictSummary } from '../shared/display'
+import { ConfidenceMeter } from '../shared/ConfidenceMeter'
+import { DimensionRow } from '../shared/DimensionRow'
+import { recencyLabel } from '../content/recency'
 import type { AnalysisOutcome, AnalysisResult } from '../engine/types'
 
 const STYLES = `
   body { margin: 0; font-family: ${SURFACE_FONT}; color: ${SURFACE_COLOR}; }
-  .pp { width: 260px; padding: 14px; }
+  .pp { width: 264px; padding: 13px 15px; border-top: 3px solid var(--accent, #6e7781); }
   .pp__head { display: flex; align-items: center; gap: 8px; }
-  .pp__icon { font-size: 14px; }
-  .pp__state { font-size: 14px; font-weight: 600; }
+  .pp__icon { font-size: 16px; color: var(--accent, inherit); }
+  .pp__state { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
   .pp__sub { margin: 4px 0 0; font-size: 12px; color: ${SURFACE_MUTED}; }
-  .pp__repo { margin: 6px 0 0; font-size: 11px; color: ${SURFACE_MUTED}; word-break: break-all; }
-  .pp__dims { list-style: none; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid rgba(0,0,0,0.1); display: grid; gap: 10px; }
-  .pp__dim-head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
-  .pp__dim-state { margin-left: auto; font-size: 11px; color: ${SURFACE_MUTED}; }
-  .pp__dim-why { margin: 2px 0 0; font-size: 11px; color: ${SURFACE_MUTED}; }
+  .meter-row { display: flex; align-items: center; gap: 7px; margin: 7px 0 0; font-size: 12px; color: ${SURFACE_MUTED}; }
+  .meter { display: inline-flex; gap: 2px; }
+  .meter__seg { width: 16px; height: 5px; border-radius: 2px; background: rgba(0,0,0,0.14); }
+  .meter__seg--on { background: #57606a; }
+  .pp__takeaway { margin: 8px 0 0; font-size: 12px; line-height: 1.45; }
+  .pp__recency { margin: 4px 0 0; font-size: 11px; color: #8b949e; }
+  .pp__details { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
+  .pp__details-title { margin: 0 0 8px; font-size: 13px; }
+  .dim { margin: 0 0 10px; }
+  .dim__head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+  .dim__state { margin-left: auto; font-size: 11px; }
+  .dim__rationale { margin: 2px 0 0; font-size: 12px; color: ${SURFACE_MUTED}; }
+  .dim__links { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .dim__links a { font-size: 11px; color: #0969da; }
+  .pp__repo { margin: 12px 0 0; font-size: 11px; color: ${SURFACE_MUTED}; word-break: break-all; }
   .pp__actions { display: flex; gap: 8px; margin-top: 12px; }
   .pp button { font-size: 12px; padding: 5px 10px; cursor: pointer; border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit; }
+  .pp button:disabled { cursor: default; opacity: 0.6; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #161b22; color: #e6edf3; }
+    .pp__sub, .pp__repo, .pp__recency, .meter-row, .dim__rationale { color: #9198a1; }
+    .meter__seg { background: rgba(255,255,255,0.16); }
+    .meter__seg--on { background: #9198a1; }
+    .dim__links a { color: #4493f8; }
+    .pp button { border-color: rgba(255,255,255,0.24); }
+    .pp__details { border-top-color: rgba(255,255,255,0.12); }
+  }
 `
 
 const openWatchlist = () =>
   chrome.tabs.create({ url: chrome.runtime.getURL('src/watchlist/index.html') })
 
-type View = { kind: 'loading' } | { kind: 'unsupported' } | { kind: 'repo'; target: SupportedRepo; outcome: AnalysisOutcome | undefined }
+type View =
+  | { kind: 'loading' }
+  | { kind: 'unsupported' }
+  | { kind: 'repo'; target: SupportedRepo; outcome: AnalysisOutcome | undefined }
 
 function Popup() {
   const [view, setView] = useState<View>({ kind: 'loading' })
@@ -54,8 +80,13 @@ function Popup() {
     }
   }, [])
 
+  const accent =
+    view.kind === 'repo' && view.outcome?.status === 'ok'
+      ? TRUST_ACCENT[view.outcome.result.trust_state]
+      : '#6e7781'
+
   return (
-    <main class="pp">
+    <main class="pp" style={`--accent:${accent}`}>
       <style>{STYLES}</style>
       {view.kind === 'loading' && <Headline icon="◌" label="Checking this page…" />}
       {view.kind === 'unsupported' && (
@@ -76,36 +107,23 @@ function RepoView({ target, outcome }: { target: SupportedRepo; outcome: Analysi
   const result = outcome?.status === 'ok' ? outcome.result : null
   return (
     <div>
-      <Headline icon={head.icon} label={head.label} sub={head.sub} />
+      <Headline icon={head.icon} label={head.label} sub={result ? undefined : head.sub} />
+      {result && <ConfidenceMeter level={result.confidence_state} />}
+      {result && <p class="pp__takeaway">{verdictSummary(result)}</p>}
+      {result && <p class="pp__recency">{recencyLabel(result.analyzed_at, new Date())}</p>}
+      {result && (
+        <div class="pp__details">
+          <h2 class="pp__details-title">Trust details</h2>
+          {result.dimension_results.map((dim) => (
+            <DimensionRow key={dim.dimension_key} dim={dim} />
+          ))}
+        </div>
+      )}
+      {result && <SaveButton target={target} result={result} />}
       <p class="pp__repo">
         {target.owner}/{target.repo}
       </p>
-      {result && <Dimensions result={result} />}
-      {result && <SaveButton target={target} result={result} />}
     </div>
-  )
-}
-
-// The "why" behind the verdict: each evaluated dimension's state + a short,
-// evidence-first rationale. (The full evidence links live in the in-page card's
-// detail drawer; the popup gives the at-a-glance reasoning.)
-function Dimensions({ result }: { result: AnalysisResult }) {
-  return (
-    <ul class="pp__dims">
-      {result.dimension_results.map((dim) => {
-        const s = DIM_DISPLAY[dim.dimension_state]
-        return (
-          <li class="pp__dim" key={dim.dimension_key}>
-            <div class="pp__dim-head">
-              <span aria-hidden="true">{s.icon}</span>
-              <strong>{DIM_TITLE[dim.dimension_key]}</strong>
-              <span class="pp__dim-state">{s.label}</span>
-            </div>
-            <p class="pp__dim-why">{dim.rationale_summary}</p>
-          </li>
-        )
-      })}
-    </ul>
   )
 }
 
@@ -153,7 +171,7 @@ function headlineFor(outcome: AnalysisOutcome | undefined): { icon: string; labe
   switch (outcome.status) {
     case 'ok': {
       const d = trustDisplay(outcome.result.trust_state)
-      return { icon: d.icon, label: d.label, sub: CONFIDENCE_LABEL[outcome.result.confidence_state] }
+      return { icon: d.icon, label: d.label }
     }
     case 'private':
       return { icon: '⊘', label: "Can't analyze this repo", sub: 'Private or unsupported' }
