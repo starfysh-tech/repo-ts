@@ -43,7 +43,12 @@ export function updateIfPresent(list: WatchlistEntry[], entry: WatchlistEntry): 
 // all writes in the background worker would make them serial if it matters later.
 export async function getWatchlist(): Promise<WatchlistEntry[]> {
   const stored = await chrome.storage.local.get(KEY)
-  return (stored[KEY] as WatchlistEntry[] | undefined) ?? []
+  const raw = stored[KEY]
+  // Untrusted at read time: a corrupted/older-schema value may not be an array,
+  // and entries may lack the owner/repo that key and identify a row. Guard once
+  // here so every reader (page + isWatched) degrades instead of throwing.
+  if (!Array.isArray(raw)) return []
+  return (raw as WatchlistEntry[]).filter((e) => e?.owner && e?.repo)
 }
 
 export async function saveToWatchlist(target: SupportedRepo, result: AnalysisResult): Promise<void> {
