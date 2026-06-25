@@ -176,3 +176,34 @@ describe('analyzeRepo — non-verdict outcomes', () => {
     expect(outcome.status).toBe('ok')
   })
 })
+
+describe('evidence links — only for observed signals (never a 404)', () => {
+  const links = (outcome: AnalysisOutcome, key: DimensionKey) =>
+    expectOk(outcome).dimension_results.find((d) => d.dimension_key === key)!.evidence_links
+
+  const analyzeWith = (repo: unknown, profile: CommunityProfileRaw) =>
+    analyzeRepo(
+      {
+        fetchRepo: async () => ({ ok: true, repo: repo as GithubRepo }),
+        fetchCommunityProfile: async () => ({ ok: true, profile }),
+        now: NOW,
+      },
+      target('o', 'r'),
+    )
+
+  it('omits the security-policy link when no security file is present', async () => {
+    // react's fixture has no security file.
+    const outcome = await analyze(ARCHETYPES.find((a) => a.name === 'react')!)
+    expect(links(outcome, 'security').some((l) => l.url.endsWith('/security/policy'))).toBe(false)
+  })
+
+  it('includes the security-policy link only when a security file is observed', async () => {
+    const outcome = await analyzeWith(reactRepo, { files: { security: { url: 'x' } } })
+    expect(links(outcome, 'security').some((l) => l.url.endsWith('/security/policy'))).toBe(true)
+  })
+
+  it('includes a README link when a README is observed', async () => {
+    const outcome = await analyze(ARCHETYPES.find((a) => a.name === 'react')!)
+    expect(links(outcome, 'transparency').some((l) => l.url.includes('#readme'))).toBe(true)
+  })
+})

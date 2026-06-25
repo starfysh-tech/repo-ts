@@ -1,5 +1,13 @@
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { SupportedRepo } from './parseRepoContext'
-import type { AnalysisResult, ConfidenceState, TrustState } from '../engine/types'
+import type {
+  AnalysisResult,
+  ConfidenceState,
+  DimensionKey,
+  DimensionResult,
+  DimensionState,
+  TrustState,
+} from '../engine/types'
 import { recencyLabel } from './recency'
 
 // The states the in-page card can render. The content script drives the
@@ -26,6 +34,24 @@ const CONFIDENCE_LABEL: Record<ConfidenceState, string> = {
   medium: 'Medium confidence',
   low: 'Low confidence',
 }
+
+// Per-dimension state, again conveyed with icon AND text (never color alone).
+const DIM_DISPLAY: Record<DimensionState, { icon: string; label: string }> = {
+  strong: { icon: '✓', label: 'Strong' },
+  mixed: { icon: '◐', label: 'Mixed' },
+  weak: { icon: '△', label: 'Weak' },
+  unknown: { icon: '–', label: 'Not enough evidence' },
+}
+
+const DIM_TITLE: Record<DimensionKey, string> = {
+  provenance: 'Provenance',
+  security: 'Security hygiene',
+  transparency: 'Transparency',
+}
+
+// The four dimensions deferred from this version (shown as "not evaluated" so the
+// user is never misled into thinking they were assessed and passed).
+const DEFERRED_DIMENSIONS = ['Release discipline', 'Governance', 'Supply chain', 'Responsiveness']
 
 export function TrustCard({ state }: { state: CardState }) {
   return (
@@ -69,6 +95,18 @@ function renderBody(state: CardState) {
 function Result({ result }: { result: AnalysisResult }) {
   const display = TRUST_DISPLAY[result.trust_state]
   const reasons = topReasons(result)
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  // Closing always returns focus to the trigger, so a keyboard user never loses
+  // their place (drawer Escape and Close both route through here). Memoized so
+  // its identity is stable — the drawer's Escape effect then runs once, not on
+  // every parent re-render.
+  const close = useCallback(() => {
+    setOpen(false)
+    triggerRef.current?.focus()
+  }, [])
+
   return (
     <div>
       <Headline icon={display.icon} label={display.label} sub={CONFIDENCE_LABEL[result.confidence_state]} />
@@ -81,6 +119,87 @@ function Result({ result }: { result: AnalysisResult }) {
                 {r.icon}
               </span>
               <span>{r.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button
+        type="button"
+        class="card__details-btn"
+        ref={triggerRef}
+        aria-expanded={open}
+        onClick={() => (open ? close() : setOpen(true))}
+      >
+        {open ? 'Hide details' : 'View details'}
+      </button>
+      {open && <Drawer result={result} onClose={close} />}
+    </div>
+  )
+}
+
+// In-page drawer mounted in the same Shadow DOM (no navigation away). Per-
+// dimension breakdown with evidence links, plus the deferred dimensions marked
+// "not evaluated". Keyboard-operable: focus moves in on open, Escape closes.
+function Drawer({ result, onClose }: { result: AnalysisResult; onClose: () => void }) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  // Move focus into the drawer once, on open (not on every re-render).
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
+
+  // Escape closes the drawer — but only while focus is within our shadow root,
+  // so we never hijack the host page's Escape (e.g. a GitHub comment box). The
+  // listener is at the document level because keydown is composed and bubbles
+  // out of the shadow root.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      const root = headingRef.current?.getRootNode() as ShadowRoot | null
+      if (root?.activeElement) onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <section class="drawer" role="region" aria-label="Trust details">
+      <h2 class="drawer__title" tabIndex={-1} ref={headingRef}>
+        Trust details
+      </h2>
+      {result.dimension_results.map((dim) => (
+        <DimensionRow key={dim.dimension_key} dim={dim} />
+      ))}
+      <h3 class="drawer__subtitle">Not evaluated in this version</h3>
+      <ul class="drawer__deferred">
+        {DEFERRED_DIMENSIONS.map((name) => (
+          <li key={name}>{name}</li>
+        ))}
+      </ul>
+      <button type="button" class="card__details-btn" onClick={onClose}>
+        Close
+      </button>
+    </section>
+  )
+}
+
+function DimensionRow({ dim }: { dim: DimensionResult }) {
+  const s = DIM_DISPLAY[dim.dimension_state]
+  return (
+    <div class="drawer__dim">
+      <div class="drawer__dim-head">
+        <span aria-hidden="true">{s.icon}</span>
+        <strong>{DIM_TITLE[dim.dimension_key]}</strong>
+        <span class="drawer__dim-state">{s.label}</span>
+      </div>
+      <p class="drawer__dim-rationale">{dim.rationale_summary}</p>
+      {dim.evidence_links.length > 0 && (
+        <ul class="drawer__links">
+          {dim.evidence_links.map((link) => (
+            <li key={link.url}>
+              <a href={link.url} target="_blank" rel="noopener noreferrer">
+                {link.label}
+              </a>
             </li>
           ))}
         </ul>

@@ -1,6 +1,8 @@
 # 05 — Detail drawer: dimensions, rationale, evidence links
 
-Status: ready-for-agent
+Status: done (pending in-browser dogfood QA)
+
+> "View details" toggles an in-page drawer in the same Shadow DOM (no navigation). Shows the 3 evaluated dimensions (icon+text state, rationale, evidence links) + the 4 deferred dimensions marked "not evaluated in this version". Evidence links render only for observed signals (asserted at the engine seam — never a 404). Keyboard: focus moves into the drawer on open; Escape/Close return focus to the trigger. Motion respects prefers-reduced-motion. Interaction QA (focus/Escape/links in a real browser) is the pending dogfood step.
 
 ## What to build
 
