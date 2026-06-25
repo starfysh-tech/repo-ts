@@ -4,11 +4,28 @@ Phase 1 client-only PoC of an MV3 browser extension that shows explainable trust
 
 - **PRD:** [`PRD.md`](./PRD.md) — full scope, 40 user stories, implementation/testing decisions.
 - **Backlog:** [`../../docs/future-enhancements.md`](../../docs/future-enhancements.md) — everything deferred from this PoC.
-- **Issues:** [`issues/`](./issues) — independently-grabbable vertical slices, all `ready-for-agent`.
+- **Issues:** [`issues/`](./issues) — the 7 vertical slices, all `done`.
 
-## How to work this
+## Current status (2026-06-25)
 
-Start a **fresh session per issue** and run `/implement` with the PRD plus the single issue file. Issues are independent vertical slices; clear context between them. Begin with the unblocked issues (01, 02); land **01 first** because the 2-call scoring design depends on its go/no-go.
+**Phase 1 is built and feature-complete — all 7 issues merged to `main`.** Shipped via 7 PRs:
+
+- **#1** issues 01–03 (spike, walking skeleton, Provenance tracer) · **#2** issue 04 (Security + Transparency, 24h caching, recency, rate-limit/limited-evidence states) · **#3** issue 05 (detail drawer) · **#4** issue 06 (watchlist + popup) · **#5** issue 07 (SPA-nav hardening).
+- **#6** hotfix: distinct entry basenames so the service worker loads (see the CLAUDE.md build gotcha).
+- **#7** dogfood UX pass: per-dimension "why" + plain-language takeaway on card and popup, inline (deduped) evidence links, bolder visuals (trust accent strip, uppercase state, neutral confidence meter), collapsible Trust details, shared components (`Headline`/`ConfidenceMeter`/`DimensionRow`/`TrustDetails`) with co-located styles, and defensive guards on storage-derived renders.
+
+**49 tests** (engine fixtures + pure seams). Note: issue 05's expandable drawer was deliberately evolved into an always-visible **collapsible** disclosure during the dogfood pass.
+
+### What's left / next
+
+1. **Watchlist page polish** — the one surface that didn't get the shared-component visual language; still the plain skeleton table.
+2. **Finish in-browser dogfood QA** — card + popup verified; not yet eyeballed: watchlist save/refresh/remove, SPA repo→repo nav, and the rate-limit/error/private/loading states.
+3. **Deferred review item** — engine should emit structured rationale segments (explicit link slots) instead of `DimensionRow` string-matching link labels against rationale prose.
+4. **Phase 2** — see the backlog (4 deferred dimensions, settings, share, cloud enrichment, Chrome Web Store packaging).
+
+## How issues were worked
+
+A **fresh session per issue** with `/implement` (PRD + the single issue). Then per slice: `/code-review` → `/commitcraft pr` → Gemini auto-review → `/pr-comment-review` → merge.
 
 ## Issue order & dependencies
 
