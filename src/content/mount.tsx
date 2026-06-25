@@ -30,10 +30,35 @@ const STYLES = `
     border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit;
   }
   .card__repo { margin: 10px 0 0; font-size: 11px; color: #57606a; word-break: break-all; }
+  .card__details-btn {
+    margin-top: 10px; font-size: 12px; padding: 4px 10px; cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit;
+  }
+  .drawer {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1);
+    max-height: 320px; overflow-y: auto;
+  }
+  .drawer__title { margin: 0 0 8px; font-size: 13px; outline: none; }
+  .drawer__dim { margin: 0 0 10px; }
+  .drawer__dim-head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+  .drawer__dim-state { margin-left: auto; color: #57606a; font-size: 11px; }
+  .drawer__dim-rationale { margin: 2px 0 0; font-size: 12px; color: #57606a; }
+  .drawer__links { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .drawer__links a { font-size: 11px; color: #0969da; }
+  .drawer__subtitle { margin: 12px 0 4px; font-size: 11px; font-weight: 600; color: #57606a; }
+  .drawer__deferred { margin: 0; padding-left: 16px; font-size: 11px; color: #8b949e; }
+  @media (prefers-reduced-motion: no-preference) {
+    .drawer { animation: drawer-in 160ms ease-out; }
+  }
+  @keyframes drawer-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
   @media (prefers-color-scheme: dark) {
     .card { background: #161b22; border-color: rgba(255,255,255,0.12); color: #e6edf3; }
-    .card__confidence, .card__repo, .card__recency { color: #9198a1; }
-    .card__retry { border-color: rgba(255,255,255,0.24); }
+    .card__confidence, .card__repo, .card__recency,
+    .drawer__dim-state, .drawer__dim-rationale, .drawer__subtitle { color: #9198a1; }
+    .card__retry, .card__details-btn { border-color: rgba(255,255,255,0.24); }
+    .drawer { border-top-color: rgba(255,255,255,0.12); }
+    .drawer__links a { color: #4493f8; }
+    .drawer__deferred { color: #6e7681; }
   }
 `
 
