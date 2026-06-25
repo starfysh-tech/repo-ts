@@ -126,7 +126,7 @@ function Result({ result }: { result: AnalysisResult }) {
         class="card__details-btn"
         ref={triggerRef}
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? close() : setOpen(true))}
       >
         {open ? 'Hide details' : 'View details'}
       </button>
@@ -142,17 +142,18 @@ function Drawer({ result, onClose }: { result: AnalysisResult; onClose: () => vo
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
     headingRef.current?.focus()
-  }, [])
+    // Listen at the document level (keydown is composed, so it bubbles out of
+    // the shadow root) so Escape closes the drawer even after focus has tabbed
+    // past the Close button and left the drawer's own subtree.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   return (
-    <section
-      class="drawer"
-      role="region"
-      aria-label="Trust details"
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose()
-      }}
-    >
+    <section class="drawer" role="region" aria-label="Trust details">
       <h2 class="drawer__title" tabIndex={-1} ref={headingRef}>
         Trust details
       </h2>
