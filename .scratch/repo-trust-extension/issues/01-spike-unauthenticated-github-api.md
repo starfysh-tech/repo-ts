@@ -1,6 +1,8 @@
 # 01 — Spike: verify unauthenticated GitHub API data availability
 
-Status: ready-for-agent
+Status: done
+
+> Verdict: **GO** on the 2-call design. Findings: [`../spikes/01-unauthenticated-github-api.md`](../spikes/01-unauthenticated-github-api.md).
 
 ## Parent
 
