@@ -1,6 +1,8 @@
 # 04 — Complete the engine: Security + Transparency, caching/recency, rate-limit & limited-evidence states
 
-Status: ready-for-agent
+Status: done (pending in-browser dogfood QA)
+
+> All three dimensions now computed from ≤2 REST calls (community profile honoring the org-default `.github` fallback). Confidence is breadth across the three. Thresholds finalized against all 7 archetype fixtures (16 engine tests): react/got strong/high, commander strong/medium, is-number mixed/medium (**never caution**), draft-js caution, hex-to-rgb/test-repo insufficient/low. 24h caching in `chrome.storage.local` (keyed by owner/repo + score_version; fresh revisit = zero API calls; version bump invalidates). Live recency ("Just now" → "Nm/Nh ago" → "Stale" past TTL). Rate-limit state reads `X-RateLimit-Reset`; limited-evidence maps to the "Limited evidence" card. 31 tests total. Live cache round-trip + browser E2E remain manual dogfood.
 
 ## What to build
 
