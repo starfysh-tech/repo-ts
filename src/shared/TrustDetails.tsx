@@ -45,7 +45,7 @@ export function TrustDetails({ result }: { result: AnalysisResult }) {
       </button>
       {open && (
         <div class="details__body">
-          {result.dimension_results.map((dim) => (
+          {(result.dimension_results ?? []).map((dim) => (
             <DimensionRow key={dim.dimension_key} dim={dim} />
           ))}
           <h3 class="details__subtitle">Not evaluated in this version</h3>

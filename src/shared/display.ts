@@ -2,6 +2,7 @@ import type {
   AnalysisResult,
   ConfidenceState,
   DimensionKey,
+  DimensionResult,
   DimensionState,
   TrustState,
 } from '../engine/types'
@@ -78,15 +79,15 @@ const joinWords = (xs: string[]): string =>
  *  signals / Medium confidence" is paired with what actually drove it.
  *  Qualitative only — no numbers, no banned vocabulary. */
 export function verdictSummary(result: AnalysisResult): string {
-  const high = result.flags.find((f) => f.severity === 'high')
+  // Tolerate a corrupted/old-schema stored result: missing arrays or an
+  // unexpected dimension key degrade rather than throwing.
+  const high = (result.flags ?? []).find((f) => f.severity === 'high')
   if (high) return `${high.label}.`
 
-  const strong = result.dimension_results
-    .filter((d) => d.dimension_state === 'strong')
-    .map((d) => DIM_TITLE[d.dimension_key].toLowerCase())
-  const limited = result.dimension_results
-    .filter((d) => d.dimension_state === 'weak' || d.dimension_state === 'unknown')
-    .map((d) => DIM_TITLE[d.dimension_key].toLowerCase())
+  const dims = result.dimension_results ?? []
+  const titleOf = (d: DimensionResult) => (DIM_TITLE[d.dimension_key] ?? d.dimension_key ?? '').toLowerCase()
+  const strong = dims.filter((d) => d.dimension_state === 'strong').map(titleOf)
+  const limited = dims.filter((d) => d.dimension_state === 'weak' || d.dimension_state === 'unknown').map(titleOf)
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
   if (strong.length && limited.length) return cap(`strong ${joinWords(strong)}, but limited ${joinWords(limited)}.`)

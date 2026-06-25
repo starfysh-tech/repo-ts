@@ -1,6 +1,6 @@
 import type { JSX } from 'preact'
 import type { DimensionResult } from '../engine/types'
-import { DIM_ACCENT, DIM_DISPLAY, DIM_TITLE } from './display'
+import { DIM_ACCENT, DIM_DISPLAY, DIM_TITLE, NEUTRAL_ACCENT } from './display'
 
 // Co-located styles (see ConfidenceMeter for the rationale).
 export const dimensionRowStyles = `
@@ -36,12 +36,15 @@ export function findWholeWord(haystack: string, needle: string): number {
 // label is named in the rationale (e.g. "README") folds inline; the rest render
 // as trailing chips. Shared by the in-page card and the popup.
 export function DimensionRow({ dim }: { dim: DimensionResult }) {
-  const s = DIM_DISPLAY[dim.dimension_state]
-  const accent = DIM_ACCENT[dim.dimension_state]
+  // Tolerate a corrupted/old-schema stored dimension: unexpected state or
+  // missing links degrade rather than crashing the whole card render.
+  const s = DIM_DISPLAY[dim.dimension_state] ?? { icon: '?', label: 'Unknown' }
+  const accent = DIM_ACCENT[dim.dimension_state] ?? NEUTRAL_ACCENT
+  const links = dim.evidence_links ?? []
 
   const inlined = new Set<string>()
-  const segments: (string | JSX.Element)[] = [dim.rationale_summary]
-  for (const link of dim.evidence_links) {
+  const segments: (string | JSX.Element)[] = [dim.rationale_summary ?? '']
+  for (const link of links) {
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i]
       if (typeof seg !== 'string') continue
@@ -63,7 +66,7 @@ export function DimensionRow({ dim }: { dim: DimensionResult }) {
       break
     }
   }
-  const chips = dim.evidence_links.filter((l) => !inlined.has(l.url))
+  const chips = links.filter((l) => !inlined.has(l.url))
 
   return (
     <div class="dim">
@@ -71,7 +74,7 @@ export function DimensionRow({ dim }: { dim: DimensionResult }) {
         <span aria-hidden="true" style={`color:${accent}`}>
           {s.icon}
         </span>
-        <strong>{DIM_TITLE[dim.dimension_key]}</strong>
+        <strong>{DIM_TITLE[dim.dimension_key] ?? dim.dimension_key}</strong>
         <span class="dim__state" style={`color:${accent}`}>
           {s.label}
         </span>
