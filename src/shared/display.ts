@@ -1,4 +1,4 @@
-import type { ConfidenceState, TrustState } from '../engine/types'
+import type { ConfidenceState, DimensionKey, DimensionState, TrustState } from '../engine/types'
 
 // Shared, conservative display vocabulary (per CLAUDE.md product rules): never
 // "safe"/"trusted"/"dangerous". Every state carries an icon AND a text label,
@@ -21,4 +21,18 @@ export const CONFIDENCE_LABEL: Record<ConfidenceState, string> = {
 // trust_state must degrade to a label, not crash the render.
 export function trustDisplay(state?: string): { icon: string; label: string } {
   return (state ? TRUST_DISPLAY[state as TrustState] : undefined) ?? { icon: '?', label: 'Unknown' }
+}
+
+// Per-dimension state, conveyed with icon AND text (never color alone).
+export const DIM_DISPLAY: Record<DimensionState, { icon: string; label: string }> = {
+  strong: { icon: '✓', label: 'Strong' },
+  mixed: { icon: '◐', label: 'Mixed' },
+  weak: { icon: '△', label: 'Weak' },
+  unknown: { icon: '–', label: 'Not enough evidence' },
+}
+
+export const DIM_TITLE: Record<DimensionKey, string> = {
+  provenance: 'Provenance',
+  security: 'Security hygiene',
+  transparency: 'Transparency',
 }

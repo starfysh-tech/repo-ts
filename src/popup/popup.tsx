@@ -3,7 +3,7 @@ import { mountApp, SURFACE_COLOR, SURFACE_FONT, SURFACE_MUTED } from '../shared/
 import { parseRepoContext, type SupportedRepo } from '../content/parseRepoContext'
 import { requestAnalysis } from '../shared/messages'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
-import { CONFIDENCE_LABEL, trustDisplay } from '../shared/display'
+import { CONFIDENCE_LABEL, DIM_DISPLAY, DIM_TITLE, trustDisplay } from '../shared/display'
 import type { AnalysisOutcome, AnalysisResult } from '../engine/types'
 
 const STYLES = `
@@ -14,6 +14,10 @@ const STYLES = `
   .pp__state { font-size: 14px; font-weight: 600; }
   .pp__sub { margin: 4px 0 0; font-size: 12px; color: ${SURFACE_MUTED}; }
   .pp__repo { margin: 6px 0 0; font-size: 11px; color: ${SURFACE_MUTED}; word-break: break-all; }
+  .pp__dims { list-style: none; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid rgba(0,0,0,0.1); display: grid; gap: 10px; }
+  .pp__dim-head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+  .pp__dim-state { margin-left: auto; font-size: 11px; color: ${SURFACE_MUTED}; }
+  .pp__dim-why { margin: 2px 0 0; font-size: 11px; color: ${SURFACE_MUTED}; }
   .pp__actions { display: flex; gap: 8px; margin-top: 12px; }
   .pp button { font-size: 12px; padding: 5px 10px; cursor: pointer; border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit; }
 `
@@ -76,8 +80,32 @@ function RepoView({ target, outcome }: { target: SupportedRepo; outcome: Analysi
       <p class="pp__repo">
         {target.owner}/{target.repo}
       </p>
+      {result && <Dimensions result={result} />}
       {result && <SaveButton target={target} result={result} />}
     </div>
+  )
+}
+
+// The "why" behind the verdict: each evaluated dimension's state + a short,
+// evidence-first rationale. (The full evidence links live in the in-page card's
+// detail drawer; the popup gives the at-a-glance reasoning.)
+function Dimensions({ result }: { result: AnalysisResult }) {
+  return (
+    <ul class="pp__dims">
+      {result.dimension_results.map((dim) => {
+        const s = DIM_DISPLAY[dim.dimension_state]
+        return (
+          <li class="pp__dim" key={dim.dimension_key}>
+            <div class="pp__dim-head">
+              <span aria-hidden="true">{s.icon}</span>
+              <strong>{DIM_TITLE[dim.dimension_key]}</strong>
+              <span class="pp__dim-state">{s.label}</span>
+            </div>
+            <p class="pp__dim-why">{dim.rationale_summary}</p>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 

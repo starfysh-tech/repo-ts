@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { SupportedRepo } from './parseRepoContext'
-import type { AnalysisResult, DimensionKey, DimensionResult, DimensionState } from '../engine/types'
+import type { AnalysisResult, DimensionResult } from '../engine/types'
 import { recencyLabel } from './recency'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
-import { CONFIDENCE_LABEL, TRUST_DISPLAY } from '../shared/display'
+import { CONFIDENCE_LABEL, DIM_DISPLAY, DIM_TITLE, TRUST_DISPLAY } from '../shared/display'
 
 // The states the in-page card can render. The content script drives the
 // transitions: loading → result | private | rate_limited | error.
@@ -13,20 +13,6 @@ export type CardState =
   | { kind: 'error'; target: SupportedRepo; onRetry: () => void }
   | { kind: 'private'; target: SupportedRepo }
   | { kind: 'rate_limited'; target: SupportedRepo; resetAt: number }
-
-// Per-dimension state, conveyed with icon AND text (never color alone).
-const DIM_DISPLAY: Record<DimensionState, { icon: string; label: string }> = {
-  strong: { icon: '✓', label: 'Strong' },
-  mixed: { icon: '◐', label: 'Mixed' },
-  weak: { icon: '△', label: 'Weak' },
-  unknown: { icon: '–', label: 'Not enough evidence' },
-}
-
-const DIM_TITLE: Record<DimensionKey, string> = {
-  provenance: 'Provenance',
-  security: 'Security hygiene',
-  transparency: 'Transparency',
-}
 
 // The four dimensions deferred from this version (shown as "not evaluated" so the
 // user is never misled into thinking they were assessed and passed).
