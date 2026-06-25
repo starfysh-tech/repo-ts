@@ -11,13 +11,21 @@ const API = 'https://api.github.com'
  * 404 → private/unsupported, 403 + exhausted budget → rate-limited.
  */
 export async function fetchRepoLive(target: SupportedRepo): Promise<RepoFetchResult> {
+  // Bound the request so a stalled connection surfaces as a retryable transient
+  // state instead of leaving the card stuck on "Analyzing…" indefinitely.
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10_000)
+
   let res: Response
   try {
     res = await fetch(`${API}/repos/${target.owner}/${target.repo}`, {
       headers: { Accept: 'application/vnd.github+json' },
+      signal: controller.signal,
     })
   } catch {
     return { ok: false, reason: 'transient' }
+  } finally {
+    clearTimeout(timeout)
   }
 
   if (res.status === 404) return { ok: false, reason: 'not_found' }

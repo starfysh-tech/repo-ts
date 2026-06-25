@@ -74,7 +74,7 @@ function Result({ result }: { result: AnalysisResult }) {
       {reasons.length > 0 && (
         <ul class="card__reasons">
           {reasons.map((r) => (
-            <li class="card__reason">
+            <li class="card__reason" key={r.text}>
               <span class="card__reason-icon" aria-hidden="true">
                 {r.icon}
               </span>

@@ -15,6 +15,13 @@ async function analyze(target: SupportedRepo): Promise<void> {
     outcome = { status: 'error' as const }
   }
 
+  // A nullish outcome means the worker never replied — treat it like a transient
+  // error (retryable), not a verdict.
+  if (!outcome || outcome.status === 'error') {
+    showCard({ kind: 'error', target, onRetry: () => void analyze(target) })
+    return
+  }
+
   switch (outcome.status) {
     case 'ok':
       showCard({ kind: 'result', target, result: outcome.result })
@@ -24,9 +31,6 @@ async function analyze(target: SupportedRepo): Promise<void> {
       break
     case 'rate_limited':
       showCard({ kind: 'rate_limited', target, resetAt: outcome.resetAt })
-      break
-    case 'error':
-      showCard({ kind: 'error', target, onRetry: () => void analyze(target) })
       break
   }
 }

@@ -27,7 +27,8 @@ export function scoreProvenance(
   // a signal can never appear in evidence without its flag/positive (or vice versa).
   const keyless: string[] = []
 
-  const hasLicense = repo.license != null
+  const license = repo.license
+  const hasLicense = license != null
   const isOrg = repo.owner.type === 'Organization'
   const ageDays = daysBetween(now, repo.created_at)
   const idleDays = daysBetween(now, repo.pushed_at)
@@ -38,8 +39,8 @@ export function scoreProvenance(
   if (repo.archived) {
     flags.push({ key: 'archived', severity: 'high', label: 'Repository is archived' })
   }
-  if (hasLicense) {
-    positives.push({ key: 'license-present', label: `Licensed (${repo.license!.spdx_id ?? repo.license!.key})` })
+  if (license != null) {
+    positives.push({ key: 'license-present', label: `Licensed (${license.spdx_id ?? license.key})` })
   } else {
     flags.push({ key: 'license-missing', severity: 'medium', label: 'No license detected' })
   }

@@ -8,8 +8,10 @@ export interface AnalyzeRequest {
   target: SupportedRepo
 }
 
-/** Sent from the content script; the worker replies with an AnalysisOutcome. */
-export function requestAnalysis(target: SupportedRepo): Promise<AnalysisOutcome> {
+/** Sent from the content script; the worker replies with an AnalysisOutcome.
+ *  Resolves `undefined` if the worker never responds (e.g. the service worker is
+ *  torn down mid-flight), so callers must guard. */
+export function requestAnalysis(target: SupportedRepo): Promise<AnalysisOutcome | undefined> {
   const message: AnalyzeRequest = { type: 'analyze', target }
-  return chrome.runtime.sendMessage(message) as Promise<AnalysisOutcome>
+  return chrome.runtime.sendMessage(message) as Promise<AnalysisOutcome | undefined>
 }
