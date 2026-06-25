@@ -1,6 +1,8 @@
 # 07 — SPA-navigation hardening
 
-Status: ready-for-agent
+Status: done (pending in-browser dogfood QA)
+
+> Content script watches popstate + Turbo events (turbo:load/render, pjax:end) with a 400ms location-poll fallback (the isolated world can't see the page's pushState), debounces re-sync (150ms), and tracks the mounted owner/repo. Repo→repo tears down the stale card before remounting; a subpage within the same repo keeps the card (no redundant call); a non-repo page tears it down; an in-flight analysis whose repo changed is dropped (no wrong-repo render); returning within TTL hits the worker cache. SPA lifecycle is DOM/timing-coupled → validated by manual dogfood (PRD: not seam-tested).
 
 ## What to build
 
