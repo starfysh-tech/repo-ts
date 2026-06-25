@@ -16,6 +16,10 @@ export const DORMANT_DAYS = 730
 export const ESTABLISHED_DAYS = 365
 
 /** The three dimensions the finished engine evaluates. Confidence is breadth
- *  across all three; a version that wires fewer (issue 03 wires only Provenance)
- *  therefore reports lower confidence, which is correct — not a bad score. */
+ *  across all three; a version that wires fewer reports lower confidence, which
+ *  is correct — not a bad score. */
 export const PLANNED_DIMENSION_COUNT = 3
+
+/** Cache TTL and the threshold past which a result reads as "stale". Within this
+ *  window a revisit serves the cached analysis with zero API calls. */
+export const CACHE_TTL_MS = 24 * 60 * 60 * 1000
