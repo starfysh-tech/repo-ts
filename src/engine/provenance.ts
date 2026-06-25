@@ -64,7 +64,7 @@ export function scoreProvenance(
   return {
     dimension: {
       dimension_key: 'provenance',
-      dimension_state: deriveProvenanceState({ repo, hasLicense, isOrg, veryNew }),
+      dimension_state: deriveProvenanceState({ archived: repo.archived, hasLicense, isOrg, veryNew }),
       // Provenance evidence comes from the always-present /repos object, so for a
       // reachable repo this dimension is well-evidenced on its own terms.
       confidence_state: 'high',
@@ -78,14 +78,14 @@ export function scoreProvenance(
 }
 
 function deriveProvenanceState(p: {
-  repo: GithubRepo
+  archived: boolean
   hasLicense: boolean
   isOrg: boolean
   veryNew: boolean
 }): DimensionContribution['dimension']['dimension_state'] {
   // Archived repos keep their underlying provenance but read as `mixed`; the
   // high-severity flag is what drives the top-level `caution`.
-  if (p.repo.archived) return 'mixed'
+  if (p.archived) return 'mixed'
   if (!p.hasLicense) return 'weak'
   if (p.isOrg && !p.veryNew) return 'strong'
   // Licensed but personal-account-owned (or very new): solid but downgraded.
