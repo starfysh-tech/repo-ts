@@ -1,4 +1,10 @@
-import type { ConfidenceState, DimensionKey, DimensionState, TrustState } from '../engine/types'
+import type {
+  AnalysisResult,
+  ConfidenceState,
+  DimensionKey,
+  DimensionState,
+  TrustState,
+} from '../engine/types'
 
 // Shared, conservative display vocabulary (per CLAUDE.md product rules): never
 // "safe"/"trusted"/"dangerous". Every state carries an icon AND a text label,
@@ -35,4 +41,28 @@ export const DIM_TITLE: Record<DimensionKey, string> = {
   provenance: 'Provenance',
   security: 'Security hygiene',
   transparency: 'Transparency',
+}
+
+const joinWords = (xs: string[]): string =>
+  xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`
+
+/** A one-line plain-language takeaway synthesizing the verdict, so "Mixed
+ *  signals / Medium confidence" is paired with what actually drove it.
+ *  Qualitative only — no numbers, no banned vocabulary. */
+export function verdictSummary(result: AnalysisResult): string {
+  const high = result.flags.find((f) => f.severity === 'high')
+  if (high) return `${high.label}.`
+
+  const strong = result.dimension_results
+    .filter((d) => d.dimension_state === 'strong')
+    .map((d) => DIM_TITLE[d.dimension_key].toLowerCase())
+  const limited = result.dimension_results
+    .filter((d) => d.dimension_state === 'weak' || d.dimension_state === 'unknown')
+    .map((d) => DIM_TITLE[d.dimension_key].toLowerCase())
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+  if (strong.length && limited.length) return cap(`strong ${joinWords(strong)}, but limited ${joinWords(limited)}.`)
+  if (strong.length) return cap(`strong ${joinWords(strong)}.`)
+  if (limited.length) return cap(`limited ${joinWords(limited)}.`)
+  return 'Mixed evidence across the evaluated areas.'
 }

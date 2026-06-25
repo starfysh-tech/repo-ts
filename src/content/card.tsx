@@ -3,7 +3,7 @@ import type { SupportedRepo } from './parseRepoContext'
 import type { AnalysisResult, DimensionResult } from '../engine/types'
 import { recencyLabel } from './recency'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
-import { CONFIDENCE_LABEL, DIM_DISPLAY, DIM_TITLE, TRUST_DISPLAY } from '../shared/display'
+import { CONFIDENCE_LABEL, DIM_DISPLAY, DIM_TITLE, TRUST_DISPLAY, verdictSummary } from '../shared/display'
 
 // The states the in-page card can render. The content script drives the
 // transitions: loading → result | private | rate_limited | error.
@@ -109,6 +109,7 @@ function Result({ result, target }: { result: AnalysisResult; target: SupportedR
         {watched ? '★' : '☆'}
       </button>
       <Headline icon={display.icon} label={display.label} sub={CONFIDENCE_LABEL[result.confidence_state]} />
+      <p class="card__takeaway">{verdictSummary(result)}</p>
       <p class="card__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
       <Details result={result} />
     </div>
@@ -137,6 +138,32 @@ function Details({ result }: { result: AnalysisResult }) {
 
 function DimensionRow({ dim }: { dim: DimensionResult }) {
   const s = DIM_DISPLAY[dim.dimension_state]
+  // Inline any evidence link whose label is named in the rationale (e.g. the
+  // "README" link folds into "Has a README"); links not named (Repository,
+  // @owner) render as trailing chips. Avoids saying the same word twice.
+  const inlined = new Set<string>()
+  const segments: (string | preact.JSX.Element)[] = [dim.rationale_summary]
+  for (const link of dim.evidence_links) {
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i]
+      if (typeof seg === 'string' && seg.includes(link.label)) {
+        const at = seg.indexOf(link.label)
+        segments.splice(
+          i,
+          1,
+          seg.slice(0, at),
+          <a href={link.url} target="_blank" rel="noopener noreferrer">
+            {link.label}
+          </a>,
+          seg.slice(at + link.label.length),
+        )
+        inlined.add(link.url)
+        break
+      }
+    }
+  }
+  const chips = dim.evidence_links.filter((l) => !inlined.has(l.url))
+
   return (
     <div class="details__dim">
       <div class="details__dim-head">
@@ -144,10 +171,10 @@ function DimensionRow({ dim }: { dim: DimensionResult }) {
         <strong>{DIM_TITLE[dim.dimension_key]}</strong>
         <span class="details__dim-state">{s.label}</span>
       </div>
-      <p class="details__dim-rationale">{dim.rationale_summary}</p>
-      {dim.evidence_links.length > 0 && (
+      <p class="details__dim-rationale">{segments}</p>
+      {chips.length > 0 && (
         <ul class="details__links">
-          {dim.evidence_links.map((link) => (
+          {chips.map((link) => (
             <li key={link.url}>
               <a href={link.url} target="_blank" rel="noopener noreferrer">
                 {link.label}

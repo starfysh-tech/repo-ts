@@ -24,7 +24,8 @@ const STYLES = `
   .card__icon { font-size: 14px; }
   .card__state { font-size: 14px; font-weight: 600; }
   .card__confidence { margin: 4px 0 0; font-size: 12px; color: #57606a; }
-  .card__recency { margin: 2px 0 0; font-size: 11px; color: #8b949e; }
+  .card__takeaway { margin: 6px 0 0; font-size: 12px; line-height: 1.4; }
+  .card__recency { margin: 4px 0 0; font-size: 11px; color: #8b949e; }
   .card__save {
     position: absolute; top: 8px; right: 10px;
     font-size: 18px; line-height: 1; padding: 2px; cursor: pointer;
