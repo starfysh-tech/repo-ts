@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { SupportedRepo } from './parseRepoContext'
 import type {
   AnalysisResult,
@@ -99,11 +99,13 @@ function Result({ result }: { result: AnalysisResult }) {
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   // Closing always returns focus to the trigger, so a keyboard user never loses
-  // their place (drawer Escape and Close both route through here).
-  const close = () => {
+  // their place (drawer Escape and Close both route through here). Memoized so
+  // its identity is stable — the drawer's Escape effect then runs once, not on
+  // every parent re-render.
+  const close = useCallback(() => {
     setOpen(false)
     triggerRef.current?.focus()
-  }
+  }, [])
 
   return (
     <div>
@@ -140,13 +142,21 @@ function Result({ result }: { result: AnalysisResult }) {
 // "not evaluated". Keyboard-operable: focus moves in on open, Escape closes.
 function Drawer({ result, onClose }: { result: AnalysisResult; onClose: () => void }) {
   const headingRef = useRef<HTMLHeadingElement>(null)
+
+  // Move focus into the drawer once, on open (not on every re-render).
   useEffect(() => {
     headingRef.current?.focus()
-    // Listen at the document level (keydown is composed, so it bubbles out of
-    // the shadow root) so Escape closes the drawer even after focus has tabbed
-    // past the Close button and left the drawer's own subtree.
+  }, [])
+
+  // Escape closes the drawer — but only while focus is within our shadow root,
+  // so we never hijack the host page's Escape (e.g. a GitHub comment box). The
+  // listener is at the document level because keydown is composed and bubbles
+  // out of the shadow root.
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key !== 'Escape') return
+      const root = headingRef.current?.getRootNode() as ShadowRoot | null
+      if (root?.activeElement) onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
