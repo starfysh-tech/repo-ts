@@ -1,5 +1,5 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
-import type { DimensionContribution, Flag, GithubRepo, PositiveSignal } from './types'
+import type { DimensionContribution, DimensionState, Flag, GithubRepo, PositiveSignal } from './types'
 import { DORMANT_DAYS, ESTABLISHED_DAYS, VERY_NEW_DAYS } from './config'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -7,13 +7,14 @@ const daysBetween = (later: Date, earlier: string) =>
   (later.getTime() - new Date(earlier).getTime()) / DAY_MS
 
 /**
- * Provenance: who published this and how established it is. Owner type, license
- * presence, repository age, dormancy, and the archived flag.
+ * Provenance: who published this and how established it is. License presence,
+ * owner type, repository age, dormancy, and the archived flag.
  *
- * Severity posture (anti-false-alarm): `archived` is the only high-severity
- * flag — it alone escalates the top-level state to `caution`. A personal-account
- * owner is a downgrade, not a flag. Dormancy is contextual and NEVER caution, so
- * a quiet-but-finished utility is not punished for being stable.
+ * Severity posture (anti-false-alarm): `archived` is the only high-severity flag
+ * — it alone escalates the top-level state to `caution`. A personal-account owner
+ * is a missing positive (not a flag, not a state cap — a disciplined solo repo can
+ * still be strong). Dormancy is contextual and NEVER caution, so a quiet-but-
+ * finished utility is not punished for being stable.
  */
 export function scoreProvenance(
   repo: GithubRepo,
@@ -22,9 +23,6 @@ export function scoreProvenance(
 ): DimensionContribution {
   const flags: Flag[] = []
   const positives: PositiveSignal[] = []
-  // Signals that carry no flag/positive object (downgrades / context). The rest
-  // of `triggered_signals` is derived from the flag and positive keys below, so
-  // a signal can never appear in evidence without its flag/positive (or vice versa).
   const keyless: string[] = []
 
   const license = repo.license
@@ -57,39 +55,39 @@ export function scoreProvenance(
 
   const triggered = [...flags.map((f) => f.key), ...positives.map((p) => p.key), ...keyless]
 
-  const evidenceLinks = [
-    { label: 'Repository', url: `https://github.com/${target.owner}/${target.repo}` },
-    { label: `@${repo.owner.login}`, url: `https://github.com/${repo.owner.login}` },
-  ]
-
   return {
     dimension: {
       dimension_key: 'provenance',
-      dimension_state: deriveProvenanceState({ archived: repo.archived, hasLicense, isOrg, veryNew }),
-      // Provenance evidence comes from the always-present /repos object, so for a
-      // reachable repo this dimension is well-evidenced on its own terms.
-      confidence_state: 'high',
+      dimension_state: provenanceState({ archived: repo.archived, hasLicense, established, veryNew, dormant }),
+      confidence_state: hasLicense || isOrg || established ? 'high' : 'low',
       triggered_signals: triggered,
-      evidence_links: evidenceLinks,
+      evidence_links: [
+        { label: 'Repository', url: `https://github.com/${target.owner}/${target.repo}` },
+        { label: `@${repo.owner.login}`, url: `https://github.com/${repo.owner.login}` },
+      ],
       rationale_summary: rationale({ hasLicense, isOrg, established, dormant, archived: repo.archived, veryNew }),
     },
+    // Affirmative provenance facts: a license, an org owner, or an established
+    // history. A brand-new unlicensed personal repo offers none → low confidence.
+    hasEvidence: hasLicense || isOrg || established,
     flags,
     positives,
   }
 }
 
-function deriveProvenanceState(p: {
+function provenanceState(p: {
   archived: boolean
   hasLicense: boolean
-  isOrg: boolean
+  established: boolean
   veryNew: boolean
-}): DimensionContribution['dimension']['dimension_state'] {
-  // Archived repos keep their underlying provenance but read as `mixed`; the
-  // high-severity flag is what drives the top-level `caution`.
+  dormant: boolean
+}): DimensionState {
+  // Archived keeps its underlying provenance but reads `mixed`; the high-severity
+  // flag is what drives the top-level `caution`.
   if (p.archived) return 'mixed'
-  if (!p.hasLicense) return 'weak'
-  if (p.isOrg && !p.veryNew) return 'strong'
-  // Licensed but personal-account-owned (or very new): solid but downgraded.
+  if (!p.hasLicense && (p.veryNew || !p.established)) return 'weak'
+  if (p.hasLicense && p.established && !p.veryNew && !p.dormant) return 'strong'
+  // Licensed but dormant, young, or unlicensed-yet-established: solid but caveated.
   return 'mixed'
 }
 

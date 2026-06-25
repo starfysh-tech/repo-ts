@@ -58,13 +58,42 @@ export interface AnalysisResult {
   analyzed_at: string
 }
 
+// ── GitHub community profile (`GET /repos/{owner}/{repo}/community/profile`) ──
+// Load-bearing: resolves community-health files the way GitHub does, including
+// the org-default `.github` fallback (verified unauthenticated in spike 01).
+// Raw shape — files are objects-or-null; we only read presence.
+export interface CommunityProfileRaw {
+  health_percentage?: number | null
+  files?: {
+    readme?: unknown
+    license?: unknown
+    code_of_conduct?: unknown
+    contributing?: unknown
+    security?: unknown
+  } | null
+}
+
+/** Normalized file presence used by the scorers. */
+export interface CommunityFiles {
+  readme: boolean
+  license: boolean
+  code_of_conduct: boolean
+  contributing: boolean
+  security: boolean
+}
+
 // ── Network boundary (the injected seam) ─────────────────────────────────────
 export type RepoFetchResult =
   | { ok: true; repo: GithubRepo }
   | { ok: false; reason: 'not_found' | 'rate_limited' | 'transient'; resetAt?: number }
 
+export type CommunityFetchResult =
+  | { ok: true; profile: CommunityProfileRaw }
+  | { ok: false; reason: 'not_found' | 'rate_limited' | 'transient'; resetAt?: number }
+
 export interface AnalyzeDeps {
   fetchRepo: (target: SupportedRepo) => Promise<RepoFetchResult>
+  fetchCommunityProfile: (target: SupportedRepo) => Promise<CommunityFetchResult>
   /** Injected reference time so age/dormancy and `analyzed_at` are deterministic in tests. */
   now: Date
 }
@@ -83,6 +112,9 @@ export type AnalysisOutcome =
 /** A dimension scorer's contribution to the overall analysis. */
 export interface DimensionContribution {
   dimension: DimensionResult
+  /** Did this dimension observe affirmative evidence? Drives confidence breadth
+   *  (a sparse repo reads low-confidence, not bad). */
+  hasEvidence: boolean
   flags: Flag[]
   positives: PositiveSignal[]
 }

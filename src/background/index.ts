@@ -1,5 +1,5 @@
 import { analyzeRepo } from '../engine/analyzeRepo'
-import { fetchRepoLive } from '../engine/githubClient'
+import { fetchCommunityProfileLive, fetchRepoLive } from '../engine/githubClient'
 import type { AnalyzeRequest } from '../shared/messages'
 import type { AnalysisOutcome } from '../engine/types'
 
@@ -9,7 +9,10 @@ chrome.runtime.onMessage.addListener(
   (message: AnalyzeRequest, _sender, sendResponse: (outcome: AnalysisOutcome) => void) => {
     if (message?.type !== 'analyze') return undefined
 
-    analyzeRepo({ fetchRepo: fetchRepoLive, now: new Date() }, message.target)
+    analyzeRepo(
+      { fetchRepo: fetchRepoLive, fetchCommunityProfile: fetchCommunityProfileLive, now: new Date() },
+      message.target,
+    )
       .then(sendResponse)
       .catch(() => sendResponse({ status: 'error' }))
 

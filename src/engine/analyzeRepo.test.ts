@@ -1,6 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import { analyzeRepo } from './analyzeRepo'
-import type { AnalysisOutcome, GithubRepo, RepoFetchResult } from './types'
+import type {
+  AnalysisOutcome,
+  CommunityFetchResult,
+  CommunityProfileRaw,
+  ConfidenceState,
+  DimensionKey,
+  DimensionState,
+  GithubRepo,
+  RepoFetchResult,
+  TrustState,
+} from './types'
 import type { SupportedRepo } from '../content/parseRepoContext'
 
 import reactRepo from './__fixtures__/repos/react.json'
@@ -11,14 +21,58 @@ import commanderRepo from './__fixtures__/repos/commander.json'
 import hexToRgbRepo from './__fixtures__/repos/hex-to-rgb.json'
 import testRepoRepo from './__fixtures__/repos/test-repo.json'
 
+import reactCp from './__fixtures__/community/react.json'
+import gotCp from './__fixtures__/community/got.json'
+import isNumberCp from './__fixtures__/community/is-number.json'
+import draftJsCp from './__fixtures__/community/draft-js.json'
+import commanderCp from './__fixtures__/community/commander.json'
+import hexToRgbCp from './__fixtures__/community/hex-to-rgb.json'
+import testRepoCp from './__fixtures__/community/test-repo.json'
+
 // Fixed reference time so age/dormancy and analyzed_at are deterministic.
 const NOW = new Date('2026-06-24T00:00:00Z')
 
 const target = (owner: string, repo: string): SupportedRepo => ({ kind: 'repo', owner, repo })
 
-async function analyze(fixture: unknown, t: SupportedRepo): Promise<AnalysisOutcome> {
-  const repo = fixture as GithubRepo
-  return analyzeRepo({ fetchRepo: async () => ({ ok: true, repo }), now: NOW }, t)
+interface Archetype {
+  name: string
+  repo: unknown
+  community: unknown
+  target: SupportedRepo
+  trust: TrustState
+  confidence: ConfidenceState
+  provenance: DimensionState
+  security: DimensionState
+  transparency: DimensionState
+}
+
+// Expectations finalized against the committed real-API fixtures (issue 04).
+const ARCHETYPES: Archetype[] = [
+  { name: 'react', repo: reactRepo, community: reactCp, target: target('facebook', 'react'),
+    trust: 'strong_signals', confidence: 'high', provenance: 'strong', security: 'mixed', transparency: 'strong' },
+  { name: 'got', repo: gotRepo, community: gotCp, target: target('sindresorhus', 'got'),
+    trust: 'strong_signals', confidence: 'high', provenance: 'strong', security: 'mixed', transparency: 'strong' },
+  { name: 'commander', repo: commanderRepo, community: commanderCp, target: target('tj', 'commander.js'),
+    trust: 'strong_signals', confidence: 'medium', provenance: 'strong', security: 'unknown', transparency: 'strong' },
+  { name: 'is-number', repo: isNumberRepo, community: isNumberCp, target: target('jonschlinkert', 'is-number'),
+    trust: 'mixed_signals', confidence: 'medium', provenance: 'mixed', security: 'unknown', transparency: 'strong' },
+  { name: 'draft-js', repo: draftJsRepo, community: draftJsCp, target: target('facebookarchive', 'draft-js'),
+    trust: 'caution', confidence: 'high', provenance: 'mixed', security: 'mixed', transparency: 'strong' },
+  { name: 'hex-to-rgb', repo: hexToRgbRepo, community: hexToRgbCp, target: target('The-Silent-Voyager-coder', 'hex-to-rgb-converter'),
+    trust: 'insufficient_evidence', confidence: 'low', provenance: 'weak', security: 'unknown', transparency: 'mixed' },
+  { name: 'test-repo', repo: testRepoRepo, community: testRepoCp, target: target('MaxGoodfella', 'test-repo'),
+    trust: 'insufficient_evidence', confidence: 'low', provenance: 'weak', security: 'unknown', transparency: 'unknown' },
+]
+
+async function analyze(a: Archetype): Promise<AnalysisOutcome> {
+  return analyzeRepo(
+    {
+      fetchRepo: async () => ({ ok: true, repo: a.repo as GithubRepo }),
+      fetchCommunityProfile: async () => ({ ok: true, profile: a.community as CommunityProfileRaw }),
+      now: NOW,
+    },
+    a.target,
+  )
 }
 
 function expectOk(outcome: AnalysisOutcome) {
@@ -26,88 +80,99 @@ function expectOk(outcome: AnalysisOutcome) {
   return outcome.result
 }
 
-const provenanceOf = (outcome: AnalysisOutcome) =>
-  expectOk(outcome).dimension_results.find((d) => d.dimension_key === 'provenance')!
+const dimState = (outcome: AnalysisOutcome, key: DimensionKey): DimensionState =>
+  expectOk(outcome).dimension_results.find((d) => d.dimension_key === key)!.dimension_state
 
-describe('analyzeRepo — Provenance tracer', () => {
+describe('analyzeRepo — full three-dimension engine', () => {
   it('stamps every analysis with the score version and the injected time', async () => {
-    const result = expectOk(await analyze(reactRepo, target('facebook', 'react')))
+    const result = expectOk(await analyze(ARCHETYPES[0]))
     expect(result.score_version).toBe('0.1.0')
     expect(result.analyzed_at).toBe(NOW.toISOString())
+    expect(result.dimension_results.map((d) => d.dimension_key)).toEqual(['provenance', 'security', 'transparency'])
   })
 
-  it('reads a healthy org-owned licensed repo as strong provenance — but not yet a verdict', async () => {
-    const outcome = await analyze(reactRepo, target('facebook', 'react'))
-    const result = expectOk(outcome)
-    expect(provenanceOf(outcome).dimension_state).toBe('strong')
-    expect(result.positive_signals.map((p) => p.key)).toEqual(
-      expect.arrayContaining(['org-owned', 'license-present', 'established']),
-    )
-    expect(result.flags).toHaveLength(0)
-    // Only Provenance is evaluated this version → low confidence, not a bad score.
-    expect(result.confidence_state).toBe('low')
-    expect(result.trust_state).toBe('insufficient_evidence')
-  })
+  for (const a of ARCHETYPES) {
+    it(`${a.name}: ${a.trust} / ${a.confidence}`, async () => {
+      const outcome = await analyze(a)
+      const result = expectOk(outcome)
+      expect(result.trust_state).toBe(a.trust)
+      expect(result.confidence_state).toBe(a.confidence)
+      expect(dimState(outcome, 'provenance')).toBe(a.provenance)
+      expect(dimState(outcome, 'security')).toBe(a.security)
+      expect(dimState(outcome, 'transparency')).toBe(a.transparency)
+    })
+  }
 
-  it('downgrades a personal-account repo to mixed provenance without flagging it', async () => {
-    for (const [fixture, t] of [
-      [gotRepo, target('sindresorhus', 'got')],
-      [commanderRepo, target('tj', 'commander.js')],
-    ] as const) {
-      const outcome = await analyze(fixture, t)
-      expect(provenanceOf(outcome).dimension_state).toBe('mixed')
-      expect(expectOk(outcome).trust_state).not.toBe('caution')
-    }
+  // The load-bearing guardrail: a quiet, finished, licensed utility must never
+  // be flagged risky merely for being stable. (is-number: last pushed 2022.)
+  it('NEVER reads a stable finished utility (is-number) as caution', async () => {
+    const a = ARCHETYPES.find((x) => x.name === 'is-number')!
+    const result = expectOk(await analyze(a))
+    expect(result.trust_state).not.toBe('caution')
+    expect(result.flags.some((f) => f.severity === 'high')).toBe(false)
   })
 
   it('surfaces an archived repo as caution via a high-severity flag', async () => {
-    const outcome = await analyze(draftJsRepo, target('facebookarchive', 'draft-js'))
-    const result = expectOk(outcome)
+    const a = ARCHETYPES.find((x) => x.name === 'draft-js')!
+    const result = expectOk(await analyze(a))
     expect(result.trust_state).toBe('caution')
     expect(result.flags).toContainEqual(expect.objectContaining({ key: 'archived', severity: 'high' }))
   })
 
-  // The load-bearing guardrail: a quiet, finished, licensed utility must never
-  // be flagged risky merely for being stable. (is-number: last pushed 2022.)
-  it('NEVER reads a stable finished utility as caution', async () => {
-    const outcome = await analyze(isNumberRepo, target('jonschlinkert', 'is-number'))
-    const result = expectOk(outcome)
-    expect(result.trust_state).not.toBe('caution')
-    expect(result.flags.some((f) => f.severity === 'high')).toBe(false)
-    expect(provenanceOf(outcome).dimension_state).toBe('mixed')
+  it('does NOT penalize an org-default .github fallback (got keeps its CoC/contributing)', async () => {
+    const a = ARCHETYPES.find((x) => x.name === 'got')!
+    const result = expectOk(await analyze(a))
+    expect(result.positive_signals.map((p) => p.key)).toEqual(
+      expect.arrayContaining(['code-of-conduct', 'contributing']),
+    )
   })
 
-  it('reads an unlicensed brand-new repo as weak provenance with a license flag, not caution', async () => {
-    const outcome = await analyze(hexToRgbRepo, target('The-Silent-Voyager-coder', 'hex-to-rgb-converter'))
-    const result = expectOk(outcome)
-    expect(provenanceOf(outcome).dimension_state).toBe('weak')
+  it('flags a missing license as medium severity, never caution', async () => {
+    const a = ARCHETYPES.find((x) => x.name === 'hex-to-rgb')!
+    const result = expectOk(await analyze(a))
     expect(result.flags).toContainEqual(expect.objectContaining({ key: 'license-missing', severity: 'medium' }))
-    expect(result.trust_state).toBe('insufficient_evidence')
-  })
-
-  it('flags a missing license on an unlicensed repo', async () => {
-    const outcome = await analyze(testRepoRepo, target('MaxGoodfella', 'test-repo'))
-    expect(provenanceOf(outcome).dimension_state).toBe('weak')
-    expect(expectOk(outcome).flags.map((f) => f.key)).toContain('license-missing')
+    expect(result.trust_state).not.toBe('caution')
   })
 })
 
 describe('analyzeRepo — non-verdict outcomes', () => {
-  const run = (fetchResult: RepoFetchResult) =>
-    analyzeRepo({ fetchRepo: async () => fetchResult, now: NOW }, target('o', 'r'))
+  const okRepo = reactRepo as GithubRepo
+  const run = (repo: RepoFetchResult, community: CommunityFetchResult) =>
+    analyzeRepo(
+      { fetchRepo: async () => repo, fetchCommunityProfile: async () => community, now: NOW },
+      target('o', 'r'),
+    )
 
-  it('maps a 404 to the private/unsupported outcome', async () => {
-    expect(await run({ ok: false, reason: 'not_found' })).toEqual({ status: 'private' })
+  it('maps a repo 404 to private and never makes the second call', async () => {
+    let communityCalled = false
+    const outcome = await analyzeRepo(
+      {
+        fetchRepo: async () => ({ ok: false, reason: 'not_found' }),
+        fetchCommunityProfile: async () => {
+          communityCalled = true
+          return { ok: true, profile: {} }
+        },
+        now: NOW,
+      },
+      target('o', 'r'),
+    )
+    expect(outcome).toEqual({ status: 'private' })
+    expect(communityCalled).toBe(false)
   })
 
-  it('maps a transient failure to the error outcome (retryable, not a verdict)', async () => {
-    expect(await run({ ok: false, reason: 'transient' })).toEqual({ status: 'error' })
+  it('maps a transient repo failure to the retryable error outcome', async () => {
+    expect(await run({ ok: false, reason: 'transient' }, { ok: true, profile: {} })).toEqual({ status: 'error' })
   })
 
-  it('surfaces the rate-limit recovery time', async () => {
-    expect(await run({ ok: false, reason: 'rate_limited', resetAt: 1782358930000 })).toEqual({
+  it('surfaces the rate-limit recovery time from either call', async () => {
+    expect(await run({ ok: true, repo: okRepo }, { ok: false, reason: 'rate_limited', resetAt: 1782358930000 })).toEqual({
       status: 'rate_limited',
       resetAt: 1782358930000,
     })
+  })
+
+  it('degrades gracefully when the community profile 404s (scores provenance only)', async () => {
+    const outcome = await run({ ok: true, repo: okRepo }, { ok: false, reason: 'not_found' })
+    expect(outcome.status).toBe('ok')
   })
 })

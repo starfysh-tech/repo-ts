@@ -1,0 +1,39 @@
+{
+  "health_percentage": 100,
+  "description": "🌐 Human-friendly and powerful HTTP request library for Node.js",
+  "documentation": null,
+  "files": {
+    "code_of_conduct": {
+      "key": "contributor_covenant",
+      "name": "Contributor Covenant",
+      "html_url": "https://github.com/sindresorhus/.github/blob/main/code-of-conduct.md",
+      "url": "https://api.github.com/repos/sindresorhus/got/community/code_of_conduct"
+    },
+    "code_of_conduct_file": {
+      "url": "https://api.github.com/repos/sindresorhus/.github/contents/code-of-conduct.md",
+      "html_url": "https://github.com/sindresorhus/.github/blob/main/code-of-conduct.md"
+    },
+    "contributing": {
+      "url": "https://api.github.com/repos/sindresorhus/got/contents/contributing.md",
+      "html_url": "https://github.com/sindresorhus/.github/blob/main/contributing.md"
+    },
+    "issue_template": null,
+    "pull_request_template": {
+      "url": "https://api.github.com/repos/sindresorhus/got/contents/.github/PULL_REQUEST_TEMPLATE.md",
+      "html_url": "https://github.com/sindresorhus/got/blob/main/.github/PULL_REQUEST_TEMPLATE.md"
+    },
+    "license": {
+      "key": "mit",
+      "name": "MIT License",
+      "spdx_id": "MIT",
+      "url": "https://api.github.com/licenses/mit",
+      "node_id": "MDc6TGljZW5zZTEz",
+      "html_url": "https://github.com/sindresorhus/got/blob/main/license"
+    },
+    "readme": {
+      "url": "https://api.github.com/repos/sindresorhus/got/contents/readme.md",
+      "html_url": "https://github.com/sindresorhus/got/blob/main/readme.md"
+    }
+  },
+  "updated_at": "2019-02-07T23:18:54Z"
+}
