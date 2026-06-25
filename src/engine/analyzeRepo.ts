@@ -78,9 +78,10 @@ const EMPTY_FILES: CommunityFiles = {
   security: false,
 }
 
-/** Raw community-profile files are objects-or-null; collapse to presence. */
-export function normalizeCommunityFiles(profile: CommunityProfileRaw): CommunityFiles {
-  const files = profile.files ?? {}
+/** Raw community-profile files are objects-or-null; collapse to presence.
+ *  Tolerates a null/undefined payload (e.g. a literal `null` JSON body). */
+export function normalizeCommunityFiles(profile: CommunityProfileRaw | null | undefined): CommunityFiles {
+  const files = profile?.files ?? {}
   return {
     readme: files.readme != null,
     license: files.license != null,

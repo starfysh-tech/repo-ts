@@ -11,7 +11,9 @@ const HOUR = 60 * MINUTE
 // re-analyzes a stale entry), so the "stale" branch mainly serves aged watchlist
 // snapshots, which are saved point-in-time and not auto-refreshed (issue 06).
 export function recencyLabel(analyzedAt: string, now: Date): string {
-  const ms = now.getTime() - new Date(analyzedAt).getTime()
+  const analyzedTime = new Date(analyzedAt).getTime()
+  if (Number.isNaN(analyzedTime)) return 'Unknown' // corrupted/missing timestamp
+  const ms = now.getTime() - analyzedTime
   if (ms >= CACHE_TTL_MS) return 'Stale — refresh recommended'
   if (ms < 5 * MINUTE) return 'Just now'
   if (ms < HOUR) return `${Math.floor(ms / MINUTE)}m ago`

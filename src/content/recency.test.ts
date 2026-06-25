@@ -22,4 +22,8 @@ describe('recencyLabel', () => {
   it('reaches the stale state past the 24h TTL', () => {
     expect(recencyLabel(ago(25 * HOUR), now)).toBe('Stale — refresh recommended')
   })
+
+  it('falls back to "Unknown" for an invalid timestamp', () => {
+    expect(recencyLabel('not-a-date', now)).toBe('Unknown')
+  })
 })
