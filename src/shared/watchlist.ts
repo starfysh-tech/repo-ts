@@ -29,7 +29,18 @@ export function hasEntry(list: WatchlistEntry[], owner: string, repo: string): b
   return list.some((e) => sameRepo(e, owner, repo))
 }
 
+/** Update an entry's snapshot only if it is still present. Used by the per-row
+ *  refresh so a refresh that resolves AFTER the user removed the row does not
+ *  resurrect the deleted entry. */
+export function updateIfPresent(list: WatchlistEntry[], entry: WatchlistEntry): WatchlistEntry[] {
+  return hasEntry(list, entry.owner, entry.repo) ? upsertEntry(list, entry) : list
+}
+
 // ── chrome.storage.local wrappers (thin; usable from any extension context) ──
+// NOTE: these are non-atomic read-modify-write. For a single user this is fine;
+// two simultaneous writes from different surfaces (e.g. popup + content card in
+// another tab) could lose one write. Accepted for the Phase-1 PoC; centralizing
+// all writes in the background worker would make them serial if it matters later.
 export async function getWatchlist(): Promise<WatchlistEntry[]> {
   const stored = await chrome.storage.local.get(KEY)
   return (stored[KEY] as WatchlistEntry[] | undefined) ?? []
@@ -45,6 +56,14 @@ export async function saveToWatchlist(target: SupportedRepo, result: AnalysisRes
 export async function removeFromWatchlist(owner: string, repo: string): Promise<void> {
   const list = await getWatchlist()
   await chrome.storage.local.set({ [KEY]: removeEntry(list, owner, repo) })
+}
+
+/** Refresh a row's snapshot without re-adding it if it was removed meanwhile. */
+export async function updateWatchlistSnapshot(target: SupportedRepo, result: AnalysisResult): Promise<void> {
+  const list = await getWatchlist()
+  await chrome.storage.local.set({
+    [KEY]: updateIfPresent(list, { owner: target.owner, repo: target.repo, result }),
+  })
 }
 
 export async function isWatched(target: SupportedRepo): Promise<boolean> {

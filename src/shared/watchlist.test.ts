@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hasEntry, removeEntry, upsertEntry, type WatchlistEntry } from './watchlist'
+import { hasEntry, removeEntry, updateIfPresent, upsertEntry, type WatchlistEntry } from './watchlist'
 import type { AnalysisResult } from '../engine/types'
 
 const entry = (owner: string, repo: string, trust = 'mixed_signals'): WatchlistEntry => ({
@@ -32,5 +32,14 @@ describe('watchlist list operations', () => {
     const list = [entry('a', 'b')]
     expect(hasEntry(list, 'a', 'b')).toBe(true)
     expect(hasEntry(list, 'a', 'x')).toBe(false)
+  })
+
+  it('updateIfPresent refreshes an existing entry but never resurrects a removed one', () => {
+    const present = updateIfPresent([entry('a', 'b', 'mixed_signals')], entry('a', 'b', 'strong_signals'))
+    expect((present[0].result as { trust_state: string }).trust_state).toBe('strong_signals')
+
+    const absent = updateIfPresent([entry('c', 'd')], entry('a', 'b', 'strong_signals'))
+    expect(hasEntry(absent, 'a', 'b')).toBe(false)
+    expect(absent).toHaveLength(1)
   })
 })

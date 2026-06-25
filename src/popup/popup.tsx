@@ -3,7 +3,7 @@ import { mountApp, SURFACE_COLOR, SURFACE_FONT, SURFACE_MUTED } from '../shared/
 import { parseRepoContext, type SupportedRepo } from '../content/parseRepoContext'
 import { requestAnalysis } from '../shared/messages'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
-import { CONFIDENCE_LABEL, TRUST_DISPLAY } from '../shared/display'
+import { CONFIDENCE_LABEL, trustDisplay } from '../shared/display'
 import type { AnalysisOutcome, AnalysisResult } from '../engine/types'
 
 const STYLES = `
@@ -28,15 +28,23 @@ function Popup() {
 
   useEffect(() => {
     let live = true
-    chrome.tabs.query({ active: true, currentWindow: true }).then(async ([tab]) => {
-      const context = tab?.url ? parseRepoContext(tab.url) : { kind: 'unsupported' as const }
-      if (context.kind !== 'repo') {
+    void (async () => {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+        const context = tab?.url ? parseRepoContext(tab.url) : { kind: 'unsupported' as const }
+        if (context.kind !== 'repo') {
+          if (live) setView({ kind: 'unsupported' })
+          return
+        }
+        // requestAnalysis (sendMessage) can reject if the worker isn't reachable;
+        // collapse that to undefined so the view shows "Analysis unavailable",
+        // never an indefinite "Checking…" hang.
+        const outcome = await requestAnalysis(context).catch(() => undefined)
+        if (live) setView({ kind: 'repo', target: context, outcome })
+      } catch {
         if (live) setView({ kind: 'unsupported' })
-        return
       }
-      const outcome = await requestAnalysis(context)
-      if (live) setView({ kind: 'repo', target: context, outcome })
-    })
+    })()
     return () => {
       live = false
     }
@@ -106,7 +114,7 @@ function headlineFor(outcome: AnalysisOutcome | undefined): { icon: string; labe
   if (!outcome) return { icon: '!', label: 'Analysis unavailable' }
   switch (outcome.status) {
     case 'ok': {
-      const d = TRUST_DISPLAY[outcome.result.trust_state]
+      const d = trustDisplay(outcome.result.trust_state)
       return { icon: d.icon, label: d.label, sub: CONFIDENCE_LABEL[outcome.result.confidence_state] }
     }
     case 'private':

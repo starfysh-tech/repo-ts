@@ -15,3 +15,10 @@ export const CONFIDENCE_LABEL: Record<ConfidenceState, string> = {
   medium: 'Medium confidence',
   low: 'Low confidence',
 }
+
+// Safe accessor: watchlist rows render from stored snapshots (untrusted at read
+// time — could be corrupted or from a future schema), so an unexpected
+// trust_state must degrade to a label, not crash the render.
+export function trustDisplay(state: string): { icon: string; label: string } {
+  return TRUST_DISPLAY[state as TrustState] ?? { icon: '?', label: 'Unknown' }
+}

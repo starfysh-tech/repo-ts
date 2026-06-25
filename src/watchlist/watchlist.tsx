@@ -3,12 +3,12 @@ import { mountApp, SURFACE_COLOR, SURFACE_FONT, SURFACE_MUTED } from '../shared/
 import {
   getWatchlist,
   removeFromWatchlist,
-  saveToWatchlist,
+  updateWatchlistSnapshot,
   type WatchlistEntry,
 } from '../shared/watchlist'
 import { requestAnalysis } from '../shared/messages'
 import { recencyLabel } from '../content/recency'
-import { TRUST_DISPLAY } from '../shared/display'
+import { trustDisplay } from '../shared/display'
 import type { SupportedRepo } from '../content/parseRepoContext'
 
 const STYLES = `
@@ -64,15 +64,16 @@ function Watchlist() {
 function Row({ entry, onChange }: { entry: WatchlistEntry; onChange: () => void }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
-  const display = TRUST_DISPLAY[entry.result.trust_state]
+  const display = trustDisplay(entry.result.trust_state)
 
   // Per-row, on demand only — no bulk or background refresh (rate-limit budget).
   const refresh = async () => {
     setBusy(true)
     setNote('')
-    const outcome = await requestAnalysis(targetOf(entry), true)
+    const outcome = await requestAnalysis(targetOf(entry), true).catch(() => undefined)
     if (outcome?.status === 'ok') {
-      await saveToWatchlist(targetOf(entry), outcome.result)
+      // updateWatchlistSnapshot won't re-add the row if it was removed mid-refresh.
+      await updateWatchlistSnapshot(targetOf(entry), outcome.result)
       onChange()
     } else if (outcome?.status === 'rate_limited') {
       setNote('Rate limit reached — try again later.')
