@@ -83,27 +83,37 @@ function RepoView({ target, outcome }: { target: SupportedRepo; outcome: Analysi
 
 function SaveButton({ target, result }: { target: SupportedRepo; result: AnalysisResult }) {
   const [watched, setWatched] = useState(false)
+  const [pending, setPending] = useState(false)
   useEffect(() => {
     let live = true
-    isWatched(target).then((w) => live && setWatched(w))
+    isWatched(target)
+      .then((w) => live && setWatched(w))
+      .catch(() => {})
     return () => {
       live = false
     }
   }, [target])
 
+  // Guard against rapid double-clicks (non-atomic storage writes).
   const toggle = async () => {
-    if (watched) {
-      await removeFromWatchlist(target.owner, target.repo)
-      setWatched(false)
-    } else {
-      await saveToWatchlist(target, result)
-      setWatched(true)
+    if (pending) return
+    setPending(true)
+    try {
+      if (watched) {
+        await removeFromWatchlist(target.owner, target.repo)
+        setWatched(false)
+      } else {
+        await saveToWatchlist(target, result)
+        setWatched(true)
+      }
+    } finally {
+      setPending(false)
     }
   }
 
   return (
     <div class="pp__actions">
-      <button type="button" aria-pressed={watched} onClick={toggle}>
+      <button type="button" aria-pressed={watched} disabled={pending} onClick={toggle}>
         {watched ? 'Saved ✓' : 'Save to watchlist'}
       </button>
     </div>

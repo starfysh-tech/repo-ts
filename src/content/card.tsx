@@ -79,23 +79,34 @@ function Result({ result, target }: { result: AnalysisResult; target: SupportedR
 
   // Reflect the saved state, and keep the toggle obvious and reversible.
   const [watched, setWatched] = useState(false)
+  const [pending, setPending] = useState(false)
   useEffect(() => {
     let live = true
-    isWatched(target).then((w) => {
-      if (live) setWatched(w)
-    })
+    isWatched(target)
+      .then((w) => {
+        if (live) setWatched(w)
+      })
+      .catch(() => {})
     return () => {
       live = false
     }
   }, [target])
 
+  // Guard against rapid double-clicks: storage writes are non-atomic, so one
+  // toggle must finish before the next can start.
   const toggleWatch = async () => {
-    if (watched) {
-      await removeFromWatchlist(target.owner, target.repo)
-      setWatched(false)
-    } else {
-      await saveToWatchlist(target, result)
-      setWatched(true)
+    if (pending) return
+    setPending(true)
+    try {
+      if (watched) {
+        await removeFromWatchlist(target.owner, target.repo)
+        setWatched(false)
+      } else {
+        await saveToWatchlist(target, result)
+        setWatched(true)
+      }
+    } finally {
+      setPending(false)
     }
   }
 
@@ -134,7 +145,13 @@ function Result({ result, target }: { result: AnalysisResult; target: SupportedR
         >
           {open ? 'Hide details' : 'View details'}
         </button>
-        <button type="button" class="card__details-btn" aria-pressed={watched} onClick={toggleWatch}>
+        <button
+          type="button"
+          class="card__details-btn"
+          aria-pressed={watched}
+          disabled={pending}
+          onClick={toggleWatch}
+        >
           {watched ? 'Saved ✓' : 'Save'}
         </button>
       </div>

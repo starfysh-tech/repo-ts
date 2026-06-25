@@ -37,7 +37,7 @@ const targetOf = (entry: WatchlistEntry): SupportedRepo => ({
 
 function Watchlist() {
   const [entries, setEntries] = useState<WatchlistEntry[] | null>(null)
-  const reload = () => getWatchlist().then(setEntries)
+  const reload = () => getWatchlist().then(setEntries).catch(() => setEntries([]))
   useEffect(() => {
     reload()
   }, [])
@@ -64,7 +64,7 @@ function Watchlist() {
 function Row({ entry, onChange }: { entry: WatchlistEntry; onChange: () => void }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
-  const display = trustDisplay(entry.result.trust_state)
+  const display = trustDisplay(entry.result?.trust_state)
 
   // Per-row, on demand only — no bulk or background refresh (rate-limit budget).
   const refresh = async () => {
@@ -96,7 +96,9 @@ function Row({ entry, onChange }: { entry: WatchlistEntry; onChange: () => void 
       <span class="wl__state">
         <span aria-hidden="true">{display.icon}</span> {display.label}
       </span>
-      <span class="wl__recency">{recencyLabel(entry.result.analyzed_at, new Date())}</span>
+      <span class="wl__recency">
+        {entry.result?.analyzed_at ? recencyLabel(entry.result.analyzed_at, new Date()) : 'Unknown'}
+      </span>
       <span class="wl__spacer" />
       <button type="button" onClick={refresh} disabled={busy}>
         {busy ? 'Refreshing…' : 'Refresh'}
