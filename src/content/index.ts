@@ -14,6 +14,10 @@ let mountedKey: string | null = null
 // been superseded (a navigation, a retry, an A->B->A re-entry) is dropped.
 let currentToken = 0
 let syncTimer: ReturnType<typeof setTimeout> | undefined
+// Last URL we synced to. Tracked at module scope and updated in sync() so an
+// event-driven sync (popstate/Turbo) keeps the poll from re-firing a redundant
+// sync ~400ms later.
+let lastHref = location.href
 
 const keyOf = (target: SupportedRepo) => `${target.owner}/${target.repo}`
 
@@ -45,6 +49,7 @@ async function analyze(target: SupportedRepo): Promise<void> {
 }
 
 function sync(): void {
+  lastHref = location.href
   const context = parseRepoContext(location.href)
 
   if (context.kind !== 'repo') {
@@ -79,8 +84,6 @@ function scheduleSync(): void {
 // snappiness optimization (GitHub may rename/remove them) and must not be relied
 // on alone — do not remove the poll. All funnel through a debounced sync().
 function installNavigationWatch(): void {
-  let lastHref = location.href
-
   window.addEventListener('popstate', scheduleSync)
   for (const event of ['turbo:load', 'turbo:render', 'pjax:end']) {
     document.addEventListener(event, scheduleSync)
