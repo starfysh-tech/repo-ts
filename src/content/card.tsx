@@ -1,15 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import type { SupportedRepo } from './parseRepoContext'
-import type {
-  AnalysisResult,
-  ConfidenceState,
-  DimensionKey,
-  DimensionResult,
-  DimensionState,
-  TrustState,
-} from '../engine/types'
+import type { AnalysisResult, DimensionKey, DimensionResult, DimensionState } from '../engine/types'
 import { recencyLabel } from './recency'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
+import { CONFIDENCE_LABEL, TRUST_DISPLAY } from '../shared/display'
 
 // The states the in-page card can render. The content script drives the
 // transitions: loading → result | private | rate_limited | error.
@@ -20,23 +14,7 @@ export type CardState =
   | { kind: 'private'; target: SupportedRepo }
   | { kind: 'rate_limited'; target: SupportedRepo; resetAt: number }
 
-// Conservative vocabulary only (per CLAUDE.md product rules): never
-// "safe"/"trusted"/"dangerous". Every state carries an icon AND a text label,
-// so it is never conveyed by color alone.
-const TRUST_DISPLAY: Record<TrustState, { icon: string; label: string }> = {
-  strong_signals: { icon: '✓', label: 'Strong signals' },
-  mixed_signals: { icon: '◐', label: 'Mixed signals' },
-  caution: { icon: '▲', label: 'Caution' },
-  insufficient_evidence: { icon: '?', label: 'Limited evidence' },
-}
-
-const CONFIDENCE_LABEL: Record<ConfidenceState, string> = {
-  high: 'High confidence',
-  medium: 'Medium confidence',
-  low: 'Low confidence',
-}
-
-// Per-dimension state, again conveyed with icon AND text (never color alone).
+// Per-dimension state, conveyed with icon AND text (never color alone).
 const DIM_DISPLAY: Record<DimensionState, { icon: string; label: string }> = {
   strong: { icon: '✓', label: 'Strong' },
   mixed: { icon: '◐', label: 'Mixed' },
