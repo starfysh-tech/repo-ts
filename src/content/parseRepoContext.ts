@@ -11,6 +11,9 @@ export type RepoContext =
   | { kind: 'repo'; owner: string; repo: string }
   | { kind: 'unsupported' }
 
+/** A repository page the extension supports analyzing (the `repo` variant). */
+export type SupportedRepo = Extract<RepoContext, { kind: 'repo' }>
+
 const UNSUPPORTED: RepoContext = { kind: 'unsupported' }
 
 // First path segment on github.com that is an app route, never a user/org that

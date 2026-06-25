@@ -1,12 +1,10 @@
-import type { RepoContext } from './parseRepoContext'
-
-type RepoCtx = Extract<RepoContext, { kind: 'repo' }>
+import type { SupportedRepo } from './parseRepoContext'
 
 // Walking-skeleton card: proves the in-page mount works and shows the detected
 // owner/repo with a placeholder state. Real trust/confidence arrives in issue 03.
 // State is conveyed with an icon AND a text label (never color alone) — the
 // accessibility posture is structural from the start.
-export function TrustCard({ context }: { context: RepoCtx }) {
+export function TrustCard({ context }: { context: SupportedRepo }) {
   return (
     <section class="card" role="region" aria-label="Repo Trust summary">
       <header class="card__head">

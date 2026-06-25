@@ -1,8 +1,6 @@
 import { render } from 'preact'
 import { TrustCard } from './card'
-import type { RepoContext } from './parseRepoContext'
-
-type RepoCtx = Extract<RepoContext, { kind: 'repo' }>
+import type { SupportedRepo } from './parseRepoContext'
 
 const HOST_ID = 'repo-trust-root'
 
@@ -30,11 +28,15 @@ const STYLES = `
   }
 `
 
-// The single mounted host for the in-page UI. Tracking it lets us tear the
-// stale card down before remounting on navigation (full SPA hardening: issue 07).
+// The single mounted host for the in-page UI. Tracking the host and its Preact
+// render container lets us tear the stale card down before remounting on
+// navigation (full SPA hardening: issue 07). We keep an explicit container
+// reference rather than re-querying the shadow root, so teardown stays correct
+// if the shadow tree gains more elements later.
 let host: HTMLDivElement | null = null
+let container: HTMLDivElement | null = null
 
-export function mountCard(context: RepoCtx): void {
+export function mountCard(context: SupportedRepo): void {
   unmountCard()
 
   host = document.createElement('div')
@@ -44,7 +46,7 @@ export function mountCard(context: RepoCtx): void {
   const shadow = host.attachShadow({ mode: 'open' })
   const style = document.createElement('style')
   style.textContent = STYLES
-  const container = document.createElement('div')
+  container = document.createElement('div')
   shadow.append(style, container)
   document.body.appendChild(host)
 
@@ -52,9 +54,8 @@ export function mountCard(context: RepoCtx): void {
 }
 
 export function unmountCard(): void {
-  if (!host) return
-  const container = host.shadowRoot?.querySelector('div')
   if (container) render(null, container) // let Preact clean up before detaching
-  host.remove()
+  host?.remove()
   host = null
+  container = null
 }
