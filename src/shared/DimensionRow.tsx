@@ -1,6 +1,20 @@
 import type { DimensionResult } from '../engine/types'
 import { DIM_ACCENT, DIM_DISPLAY, DIM_TITLE } from './display'
 
+// Co-located styles (see ConfidenceMeter for the rationale).
+export const dimensionRowStyles = `
+  .dim { margin: 0 0 10px; }
+  .dim__head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+  .dim__state { margin-left: auto; font-size: 11px; }
+  .dim__rationale { margin: 2px 0 0; font-size: 12px; color: #57606a; }
+  .dim__links { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .dim__links a { font-size: 11px; color: #0969da; }
+  @media (prefers-color-scheme: dark) {
+    .dim__rationale { color: #9198a1; }
+    .dim__links a { color: #4493f8; }
+  }
+`
+
 const isWordChar = (ch: string | undefined) => ch != null && /[a-z0-9]/i.test(ch)
 
 /** Index of `needle` in `haystack` as a case-insensitive whole word, or -1. */

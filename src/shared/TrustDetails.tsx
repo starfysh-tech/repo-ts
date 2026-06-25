@@ -2,6 +2,25 @@ import { useState } from 'preact/hooks'
 import type { AnalysisResult } from '../engine/types'
 import { DimensionRow } from './DimensionRow'
 
+// Co-located styles (see ConfidenceMeter for the rationale).
+export const trustDetailsStyles = `
+  .details { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
+  .details__toggle {
+    display: flex; align-items: center; gap: 6px; width: 100%;
+    margin: 0; padding: 0; border: none; background: transparent; color: inherit;
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left;
+  }
+  .details__chevron { font-size: 9px; width: 10px; }
+  .details__body { margin-top: 8px; }
+  .details__subtitle { margin: 12px 0 4px; font-size: 11px; font-weight: 600; color: #57606a; }
+  .details__deferred { margin: 0; padding-left: 16px; font-size: 11px; color: #8b949e; }
+  @media (prefers-color-scheme: dark) {
+    .details { border-top-color: rgba(255,255,255,0.12); }
+    .details__subtitle { color: #9198a1; }
+    .details__deferred { color: #6e7681; }
+  }
+`
+
 // The four dimensions deferred from this version (shown as "not evaluated" so the
 // user is never misled into thinking they were assessed and passed).
 const DEFERRED_DIMENSIONS = ['Release discipline', 'Governance', 'Supply chain', 'Responsiveness']

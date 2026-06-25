@@ -4,11 +4,14 @@ import { parseRepoContext, type SupportedRepo } from '../content/parseRepoContex
 import { requestAnalysis } from '../shared/messages'
 import { useWatchToggle } from '../shared/useWatchToggle'
 import { TRUST_ACCENT, trustDisplay, verdictSummary } from '../shared/display'
-import { ConfidenceMeter } from '../shared/ConfidenceMeter'
-import { TrustDetails } from '../shared/TrustDetails'
+import { ConfidenceMeter, confidenceMeterStyles } from '../shared/ConfidenceMeter'
+import { TrustDetails, trustDetailsStyles } from '../shared/TrustDetails'
+import { dimensionRowStyles } from '../shared/DimensionRow'
 import { recencyLabel } from '../content/recency'
 import type { AnalysisOutcome, AnalysisResult } from '../engine/types'
 
+// Popup-specific rules here; the shared components inject their own co-located
+// styles (so the card and popup can't drift).
 const STYLES = `
   body { margin: 0; font-family: ${SURFACE_FONT}; color: ${SURFACE_COLOR}; }
   .pp { width: 264px; padding: 13px 15px; border-top: 3px solid var(--accent, #6e7781); }
@@ -16,42 +19,20 @@ const STYLES = `
   .pp__icon { font-size: 16px; color: var(--accent, inherit); }
   .pp__state { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
   .pp__sub { margin: 4px 0 0; font-size: 12px; color: ${SURFACE_MUTED}; }
-  .meter-row { display: flex; align-items: center; gap: 7px; margin: 7px 0 0; font-size: 12px; color: ${SURFACE_MUTED}; }
-  .meter { display: inline-flex; gap: 2px; }
-  .meter__seg { width: 16px; height: 5px; border-radius: 2px; background: rgba(0,0,0,0.14); }
-  .meter__seg--on { background: #57606a; }
   .pp__takeaway { margin: 8px 0 0; font-size: 12px; line-height: 1.45; }
   .pp__recency { margin: 4px 0 0; font-size: 11px; color: #8b949e; }
-  .details { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
-  .details__toggle {
-    display: flex; align-items: center; gap: 6px; width: 100%;
-    margin: 0; padding: 0; border: none; background: transparent; color: inherit;
-    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left;
-  }
-  .details__chevron { font-size: 9px; width: 10px; }
-  .details__body { margin-top: 8px; }
-  .details__subtitle { margin: 12px 0 4px; font-size: 11px; font-weight: 600; color: ${SURFACE_MUTED}; }
-  .details__deferred { margin: 0; padding-left: 16px; font-size: 11px; color: #8b949e; }
-  .dim { margin: 0 0 10px; }
-  .dim__head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
-  .dim__state { margin-left: auto; font-size: 11px; }
-  .dim__rationale { margin: 2px 0 0; font-size: 12px; color: ${SURFACE_MUTED}; }
-  .dim__links { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; }
-  .dim__links a { font-size: 11px; color: #0969da; }
   .pp__repo { margin: 12px 0 0; font-size: 11px; color: ${SURFACE_MUTED}; word-break: break-all; }
   .pp__actions { display: flex; gap: 8px; margin-top: 12px; }
   .pp button { font-size: 12px; padding: 5px 10px; cursor: pointer; border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit; }
   .pp button:disabled { cursor: default; opacity: 0.6; }
   @media (prefers-color-scheme: dark) {
     body { background: #161b22; color: #e6edf3; }
-    .pp__sub, .pp__repo, .pp__recency, .meter-row, .dim__rationale { color: #9198a1; }
-    .meter__seg { background: rgba(255,255,255,0.16); }
-    .meter__seg--on { background: #9198a1; }
-    .dim__links a { color: #4493f8; }
+    .pp__sub, .pp__repo, .pp__recency { color: #9198a1; }
     .pp button { border-color: rgba(255,255,255,0.24); }
-    .details { border-top-color: rgba(255,255,255,0.12); }
-    .details__deferred { color: #6e7681; }
   }
+  ${confidenceMeterStyles}
+  ${dimensionRowStyles}
+  ${trustDetailsStyles}
 `
 
 const openWatchlist = () =>

@@ -1,10 +1,14 @@
 import { render } from 'preact'
 import { TrustCard, type CardState } from './card'
+import { confidenceMeterStyles } from '../shared/ConfidenceMeter'
+import { dimensionRowStyles } from '../shared/DimensionRow'
+import { trustDetailsStyles } from '../shared/TrustDetails'
 
 const HOST_ID = 'repo-trust-root'
 
 // Styles live inside the Shadow DOM so GitHub's CSS cannot leak in and ours
-// cannot leak out (isolation in both directions, per the PRD).
+// cannot leak out (isolation in both directions, per the PRD). Card-specific
+// rules here; the shared components inject their own co-located styles.
 const STYLES = `
   :host { all: initial; }
   .card {
@@ -25,10 +29,6 @@ const STYLES = `
   .card__icon { font-size: 16px; color: var(--accent, inherit); }
   .card__state { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
   .card__sub { margin: 4px 0 0; font-size: 12px; color: #57606a; }
-  .meter-row { display: flex; align-items: center; gap: 7px; margin: 7px 0 0; font-size: 12px; color: #57606a; }
-  .meter { display: inline-flex; gap: 2px; }
-  .meter__seg { width: 16px; height: 5px; border-radius: 2px; background: rgba(0,0,0,0.12); }
-  .meter__seg--on { background: #57606a; }
   .card__takeaway { margin: 8px 0 0; font-size: 12px; line-height: 1.45; }
   .card__recency { margin: 4px 0 0; font-size: 11px; color: #8b949e; }
   .card__save {
@@ -43,33 +43,14 @@ const STYLES = `
     border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit;
   }
   .card__repo { margin: 10px 0 0; font-size: 11px; color: #57606a; word-break: break-all; }
-  .details { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
-  .details__toggle {
-    display: flex; align-items: center; gap: 6px; width: 100%;
-    margin: 0; padding: 0; border: none; background: transparent; color: inherit;
-    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left;
-  }
-  .details__chevron { font-size: 9px; width: 10px; }
-  .details__body { margin-top: 8px; }
-  .dim { margin: 0 0 10px; }
-  .dim__head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
-  .dim__state { margin-left: auto; font-size: 11px; }
-  .dim__rationale { margin: 2px 0 0; font-size: 12px; color: #57606a; }
-  .dim__links { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; }
-  .dim__links a { font-size: 11px; color: #0969da; }
-  .details__subtitle { margin: 12px 0 4px; font-size: 11px; font-weight: 600; color: #57606a; }
-  .details__deferred { margin: 0; padding-left: 16px; font-size: 11px; color: #8b949e; }
   @media (prefers-color-scheme: dark) {
     .card { background: #161b22; border-color: rgba(255,255,255,0.12); color: #e6edf3; }
-    .meter-row, .card__sub, .card__repo, .card__recency,
-    .dim__rationale, .details__subtitle { color: #9198a1; }
+    .card__sub, .card__repo, .card__recency { color: #9198a1; }
     .card__retry { border-color: rgba(255,255,255,0.24); }
-    .details { border-top-color: rgba(255,255,255,0.12); }
-    .dim__links a { color: #4493f8; }
-    .details__deferred { color: #6e7681; }
-    .meter__seg { background: rgba(255,255,255,0.16); }
-    .meter__seg--on { background: #9198a1; }
   }
+  ${confidenceMeterStyles}
+  ${dimensionRowStyles}
+  ${trustDetailsStyles}
 `
 
 // Single mounted host for the in-page UI. Tracking the host and its Preact
