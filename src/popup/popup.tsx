@@ -5,7 +5,7 @@ import { requestAnalysis } from '../shared/messages'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
 import { TRUST_ACCENT, trustDisplay, verdictSummary } from '../shared/display'
 import { ConfidenceMeter } from '../shared/ConfidenceMeter'
-import { DimensionRow } from '../shared/DimensionRow'
+import { TrustDetails } from '../shared/TrustDetails'
 import { recencyLabel } from '../content/recency'
 import type { AnalysisOutcome, AnalysisResult } from '../engine/types'
 
@@ -22,8 +22,16 @@ const STYLES = `
   .meter__seg--on { background: #57606a; }
   .pp__takeaway { margin: 8px 0 0; font-size: 12px; line-height: 1.45; }
   .pp__recency { margin: 4px 0 0; font-size: 11px; color: #8b949e; }
-  .pp__details { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
-  .pp__details-title { margin: 0 0 8px; font-size: 13px; }
+  .details { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
+  .details__toggle {
+    display: flex; align-items: center; gap: 6px; width: 100%;
+    margin: 0; padding: 0; border: none; background: transparent; color: inherit;
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left;
+  }
+  .details__chevron { font-size: 9px; width: 10px; }
+  .details__body { margin-top: 8px; }
+  .details__subtitle { margin: 12px 0 4px; font-size: 11px; font-weight: 600; color: ${SURFACE_MUTED}; }
+  .details__deferred { margin: 0; padding-left: 16px; font-size: 11px; color: #8b949e; }
   .dim { margin: 0 0 10px; }
   .dim__head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
   .dim__state { margin-left: auto; font-size: 11px; }
@@ -41,7 +49,8 @@ const STYLES = `
     .meter__seg--on { background: #9198a1; }
     .dim__links a { color: #4493f8; }
     .pp button { border-color: rgba(255,255,255,0.24); }
-    .pp__details { border-top-color: rgba(255,255,255,0.12); }
+    .details { border-top-color: rgba(255,255,255,0.12); }
+    .details__deferred { color: #6e7681; }
   }
 `
 
@@ -111,14 +120,7 @@ function RepoView({ target, outcome }: { target: SupportedRepo; outcome: Analysi
       {result && <ConfidenceMeter level={result.confidence_state} />}
       {result && <p class="pp__takeaway">{verdictSummary(result)}</p>}
       {result && <p class="pp__recency">{recencyLabel(result.analyzed_at, new Date())}</p>}
-      {result && (
-        <div class="pp__details">
-          <h2 class="pp__details-title">Trust details</h2>
-          {result.dimension_results.map((dim) => (
-            <DimensionRow key={dim.dimension_key} dim={dim} />
-          ))}
-        </div>
-      )}
+      {result && <TrustDetails result={result} />}
       {result && <SaveButton target={target} result={result} />}
       <p class="pp__repo">
         {target.owner}/{target.repo}

@@ -4,7 +4,7 @@ import type { AnalysisResult } from '../engine/types'
 import { recencyLabel } from './recency'
 import { isWatched, removeFromWatchlist, saveToWatchlist } from '../shared/watchlist'
 import { ConfidenceMeter } from '../shared/ConfidenceMeter'
-import { DimensionRow } from '../shared/DimensionRow'
+import { TrustDetails } from '../shared/TrustDetails'
 import { TRUST_ACCENT, TRUST_DISPLAY, verdictSummary } from '../shared/display'
 
 // The states the in-page card can render. The content script drives the
@@ -15,10 +15,6 @@ export type CardState =
   | { kind: 'error'; target: SupportedRepo; onRetry: () => void }
   | { kind: 'private'; target: SupportedRepo }
   | { kind: 'rate_limited'; target: SupportedRepo; resetAt: number }
-
-// The four dimensions deferred from this version (shown as "not evaluated" so the
-// user is never misled into thinking they were assessed and passed).
-const DEFERRED_DIMENSIONS = ['Release discipline', 'Governance', 'Supply chain', 'Responsiveness']
 
 export function TrustCard({ state }: { state: CardState }) {
   // Trust-colored top accent (neutral for the non-verdict states).
@@ -116,28 +112,8 @@ function Result({ result, target }: { result: AnalysisResult; target: SupportedR
       <ConfidenceMeter level={result.confidence_state} />
       <p class="card__takeaway">{verdictSummary(result)}</p>
       <p class="card__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
-      <Details result={result} />
+      <TrustDetails result={result} />
     </div>
-  )
-}
-
-// The per-dimension breakdown, shown directly on the card (no expand): each
-// evaluated dimension's state + evidence-first rationale + evidence links, plus
-// the deferred dimensions marked "not evaluated".
-function Details({ result }: { result: AnalysisResult }) {
-  return (
-    <section class="card__details" aria-label="Trust details">
-      <h2 class="details__title">Trust details</h2>
-      {result.dimension_results.map((dim) => (
-        <DimensionRow key={dim.dimension_key} dim={dim} />
-      ))}
-      <h3 class="details__subtitle">Not evaluated in this version</h3>
-      <ul class="details__deferred">
-        {DEFERRED_DIMENSIONS.map((name) => (
-          <li key={name}>{name}</li>
-        ))}
-      </ul>
-    </section>
   )
 }
 

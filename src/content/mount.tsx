@@ -43,10 +43,14 @@ const STYLES = `
     border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit;
   }
   .card__repo { margin: 10px 0 0; font-size: 11px; color: #57606a; word-break: break-all; }
-  .card__details {
-    margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1);
+  .details { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); }
+  .details__toggle {
+    display: flex; align-items: center; gap: 6px; width: 100%;
+    margin: 0; padding: 0; border: none; background: transparent; color: inherit;
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left;
   }
-  .details__title { margin: 0 0 8px; font-size: 13px; }
+  .details__chevron { font-size: 9px; width: 10px; }
+  .details__body { margin-top: 8px; }
   .dim { margin: 0 0 10px; }
   .dim__head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
   .dim__state { margin-left: auto; font-size: 11px; }
@@ -60,7 +64,7 @@ const STYLES = `
     .meter-row, .card__repo, .card__recency,
     .dim__rationale, .details__subtitle { color: #9198a1; }
     .card__retry { border-color: rgba(255,255,255,0.24); }
-    .card__details { border-top-color: rgba(255,255,255,0.12); }
+    .details { border-top-color: rgba(255,255,255,0.12); }
     .dim__links a { color: #4493f8; }
     .details__deferred { color: #6e7681; }
     .meter__seg { background: rgba(255,255,255,0.16); }
