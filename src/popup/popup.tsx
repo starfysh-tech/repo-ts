@@ -3,10 +3,11 @@ import { mountApp, SURFACE_COLOR, SURFACE_FONT, SURFACE_MUTED } from '../shared/
 import { parseRepoContext, type SupportedRepo } from '../content/parseRepoContext'
 import { requestAnalysis } from '../shared/messages'
 import { useWatchToggle } from '../shared/useWatchToggle'
-import { TRUST_ACCENT, trustDisplay, verdictSummary } from '../shared/display'
+import { trustAccent, trustDisplay, verdictSummary } from '../shared/display'
 import { ConfidenceMeter, confidenceMeterStyles } from '../shared/ConfidenceMeter'
 import { TrustDetails, trustDetailsStyles } from '../shared/TrustDetails'
 import { dimensionRowStyles } from '../shared/DimensionRow'
+import { Headline, headlineStyles } from '../shared/Headline'
 import { recencyLabel } from '../content/recency'
 import type { AnalysisOutcome, AnalysisResult } from '../engine/types'
 
@@ -15,10 +16,6 @@ import type { AnalysisOutcome, AnalysisResult } from '../engine/types'
 const STYLES = `
   body { margin: 0; font-family: ${SURFACE_FONT}; color: ${SURFACE_COLOR}; }
   .pp { width: 264px; padding: 13px 15px; border-top: 3px solid var(--accent, #6e7781); }
-  .pp__head { display: flex; align-items: center; gap: 8px; }
-  .pp__icon { font-size: 16px; color: var(--accent, inherit); }
-  .pp__state { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-  .pp__sub { margin: 4px 0 0; font-size: 12px; color: ${SURFACE_MUTED}; }
   .pp__takeaway { margin: 8px 0 0; font-size: 12px; line-height: 1.45; }
   .pp__recency { margin: 4px 0 0; font-size: 11px; color: #8b949e; }
   .pp__repo { margin: 12px 0 0; font-size: 11px; color: ${SURFACE_MUTED}; word-break: break-all; }
@@ -27,9 +24,10 @@ const STYLES = `
   .pp button:disabled { cursor: default; opacity: 0.6; }
   @media (prefers-color-scheme: dark) {
     body { background: #161b22; color: #e6edf3; }
-    .pp__sub, .pp__repo, .pp__recency { color: #9198a1; }
+    .pp__repo, .pp__recency { color: #9198a1; }
     .pp button { border-color: rgba(255,255,255,0.24); }
   }
+  ${headlineStyles}
   ${confidenceMeterStyles}
   ${dimensionRowStyles}
   ${trustDetailsStyles}
@@ -70,10 +68,9 @@ function Popup() {
     }
   }, [])
 
-  const accent =
-    view.kind === 'repo' && view.outcome?.status === 'ok'
-      ? TRUST_ACCENT[view.outcome.result.trust_state]
-      : '#6e7781'
+  const accent = trustAccent(
+    view.kind === 'repo' && view.outcome?.status === 'ok' ? view.outcome.result.trust_state : undefined,
+  )
 
   return (
     <main class="pp" style={`--accent:${accent}`}>
@@ -94,18 +91,31 @@ function Popup() {
 
 function RepoView({ target, outcome }: { target: SupportedRepo; outcome: AnalysisOutcome | undefined }) {
   const head = headlineFor(outcome)
+  const repo = (
+    <p class="pp__repo">
+      {target.owner}/{target.repo}
+    </p>
+  )
   const result = outcome?.status === 'ok' ? outcome.result : null
+
+  if (!result) {
+    return (
+      <div>
+        <Headline icon={head.icon} label={head.label} sub={head.sub} />
+        {repo}
+      </div>
+    )
+  }
+
   return (
     <div>
-      <Headline icon={head.icon} label={head.label} sub={result ? undefined : head.sub} />
-      {result && <ConfidenceMeter level={result.confidence_state} />}
-      {result && <p class="pp__takeaway">{verdictSummary(result)}</p>}
-      {result && <p class="pp__recency">{recencyLabel(result.analyzed_at, new Date())}</p>}
-      {result && <TrustDetails result={result} />}
-      {result && <SaveButton target={target} result={result} />}
-      <p class="pp__repo">
-        {target.owner}/{target.repo}
-      </p>
+      <Headline icon={head.icon} label={head.label} />
+      <ConfidenceMeter level={result.confidence_state} />
+      <p class="pp__takeaway">{verdictSummary(result)}</p>
+      <p class="pp__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
+      <TrustDetails result={result} />
+      <SaveButton target={target} result={result} />
+      {repo}
     </div>
   )
 }
@@ -135,20 +145,6 @@ function headlineFor(outcome: AnalysisOutcome | undefined): { icon: string; labe
     case 'error':
       return { icon: '!', label: 'Analysis unavailable', sub: 'A temporary problem — not a verdict.' }
   }
-}
-
-function Headline({ icon, label, sub }: { icon: string; label: string; sub?: string }) {
-  return (
-    <div>
-      <div class="pp__head">
-        <span class="pp__icon" aria-hidden="true">
-          {icon}
-        </span>
-        <span class="pp__state">{label}</span>
-      </div>
-      {sub && <p class="pp__sub">{sub}</p>}
-    </div>
-  )
 }
 
 mountApp(<Popup />)

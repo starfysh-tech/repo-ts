@@ -4,7 +4,8 @@ import { recencyLabel } from './recency'
 import { useWatchToggle } from '../shared/useWatchToggle'
 import { ConfidenceMeter } from '../shared/ConfidenceMeter'
 import { TrustDetails } from '../shared/TrustDetails'
-import { TRUST_ACCENT, TRUST_DISPLAY, verdictSummary } from '../shared/display'
+import { Headline } from '../shared/Headline'
+import { TRUST_DISPLAY, trustAccent, verdictSummary } from '../shared/display'
 
 // The states the in-page card can render. The content script drives the
 // transitions: loading → result | private | rate_limited | error.
@@ -17,7 +18,7 @@ export type CardState =
 
 export function TrustCard({ state }: { state: CardState }) {
   // Trust-colored top accent (neutral for the non-verdict states).
-  const accent = state.kind === 'result' ? TRUST_ACCENT[state.result.trust_state] : '#6e7781'
+  const accent = trustAccent(state.kind === 'result' ? state.result.trust_state : undefined)
   return (
     <section class="card" role="region" aria-label="Repo Trust summary" style={`--accent:${accent}`}>
       {renderBody(state)}
@@ -80,20 +81,6 @@ function Result({ result, target }: { result: AnalysisResult; target: SupportedR
       <p class="card__takeaway">{verdictSummary(result)}</p>
       <p class="card__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
       <TrustDetails result={result} />
-    </div>
-  )
-}
-
-function Headline({ icon, label, sub }: { icon: string; label: string; sub?: string }) {
-  return (
-    <div>
-      <header class="card__head">
-        <span class="card__icon" aria-hidden="true">
-          {icon}
-        </span>
-        <span class="card__state">{label}</span>
-      </header>
-      {sub && <p class="card__sub">{sub}</p>}
     </div>
   )
 }

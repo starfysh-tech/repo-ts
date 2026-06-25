@@ -39,6 +39,14 @@ export const DIM_ACCENT: Record<DimensionState, string> = {
   unknown: '#6e7781',
 }
 
+/** Slate neutral used when there is no trust verdict yet (loading/error/etc.). */
+export const NEUTRAL_ACCENT = '#6e7781'
+
+/** The accent for a trust state, or the neutral when there's no verdict. */
+export function trustAccent(state?: TrustState): string {
+  return state ? TRUST_ACCENT[state] : NEUTRAL_ACCENT
+}
+
 /** How many of the 3 confidence-meter segments are filled. */
 export const CONFIDENCE_FILL: Record<ConfidenceState, number> = { high: 3, medium: 2, low: 1 }
 

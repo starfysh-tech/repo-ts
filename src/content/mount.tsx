@@ -3,6 +3,7 @@ import { TrustCard, type CardState } from './card'
 import { confidenceMeterStyles } from '../shared/ConfidenceMeter'
 import { dimensionRowStyles } from '../shared/DimensionRow'
 import { trustDetailsStyles } from '../shared/TrustDetails'
+import { headlineStyles } from '../shared/Headline'
 
 const HOST_ID = 'repo-trust-root'
 
@@ -25,10 +26,7 @@ const STYLES = `
     max-height: calc(100vh - 96px);
     overflow-y: auto;
   }
-  .card__head { display: flex; align-items: center; gap: 8px; padding-right: 24px; }
-  .card__icon { font-size: 16px; color: var(--accent, inherit); }
-  .card__state { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-  .card__sub { margin: 4px 0 0; font-size: 12px; color: #57606a; }
+  .card .rt-head { padding-right: 24px; } /* clear the corner save icon */
   .card__takeaway { margin: 8px 0 0; font-size: 12px; line-height: 1.45; }
   .card__recency { margin: 4px 0 0; font-size: 11px; color: #8b949e; }
   .card__save {
@@ -45,9 +43,10 @@ const STYLES = `
   .card__repo { margin: 10px 0 0; font-size: 11px; color: #57606a; word-break: break-all; }
   @media (prefers-color-scheme: dark) {
     .card { background: #161b22; border-color: rgba(255,255,255,0.12); color: #e6edf3; }
-    .card__sub, .card__repo, .card__recency { color: #9198a1; }
+    .card__repo, .card__recency { color: #9198a1; }
     .card__retry { border-color: rgba(255,255,255,0.24); }
   }
+  ${headlineStyles}
   ${confidenceMeterStyles}
   ${dimensionRowStyles}
   ${trustDetailsStyles}

@@ -1,3 +1,4 @@
+import type { JSX } from 'preact'
 import type { DimensionResult } from '../engine/types'
 import { DIM_ACCENT, DIM_DISPLAY, DIM_TITLE } from './display'
 
@@ -39,7 +40,7 @@ export function DimensionRow({ dim }: { dim: DimensionResult }) {
   const accent = DIM_ACCENT[dim.dimension_state]
 
   const inlined = new Set<string>()
-  const segments: (string | preact.JSX.Element)[] = [dim.rationale_summary]
+  const segments: (string | JSX.Element)[] = [dim.rationale_summary]
   for (const link of dim.evidence_links) {
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i]
