@@ -1,67 +1,55 @@
 import { render } from 'preact'
 import { TrustCard, type CardState } from './card'
+import { confidenceMeterStyles } from '../shared/ConfidenceMeter'
+import { dimensionRowStyles } from '../shared/DimensionRow'
+import { trustDetailsStyles } from '../shared/TrustDetails'
+import { headlineStyles } from '../shared/Headline'
 
 const HOST_ID = 'repo-trust-root'
 
 // Styles live inside the Shadow DOM so GitHub's CSS cannot leak in and ours
-// cannot leak out (isolation in both directions, per the PRD).
+// cannot leak out (isolation in both directions, per the PRD). Card-specific
+// rules here; the shared components inject their own co-located styles.
 const STYLES = `
   :host { all: initial; }
   .card {
+    position: relative;
     font-family: system-ui, -apple-system, sans-serif;
-    width: 248px;
-    padding: 12px 14px;
+    width: 260px;
+    padding: 13px 15px;
     border: 1px solid rgba(0,0,0,0.12);
+    border-top: 3px solid var(--accent, #6e7781);
     border-radius: 10px;
     background: #fff;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.14);
     color: #1f2328;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
   }
-  .card__head { display: flex; align-items: center; gap: 8px; }
-  .card__icon { font-size: 14px; }
-  .card__state { font-size: 14px; font-weight: 600; }
-  .card__confidence { margin: 4px 0 0; font-size: 12px; color: #57606a; }
-  .card__recency { margin: 2px 0 0; font-size: 11px; color: #8b949e; }
-  .card__reasons { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-  .card__reason { display: flex; align-items: baseline; gap: 8px; font-size: 12px; }
-  .card__reason-icon { font-size: 11px; width: 12px; flex: none; }
+  .card .rt-head { padding-right: 24px; } /* clear the corner save icon */
+  .card__takeaway { margin: 8px 0 0; font-size: 12px; line-height: 1.45; }
+  .card__recency { margin: 4px 0 0; font-size: 11px; color: #8b949e; }
+  .card__save {
+    position: absolute; top: 8px; right: 10px;
+    font-size: 18px; line-height: 1; padding: 2px; cursor: pointer;
+    border: none; background: transparent; color: inherit;
+  }
+  .card__save[aria-pressed="true"] { color: #d4a72c; }
+  .card__save:disabled { cursor: default; opacity: 0.6; }
   .card__retry {
     margin-top: 8px; font-size: 12px; padding: 4px 10px; cursor: pointer;
     border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit;
   }
   .card__repo { margin: 10px 0 0; font-size: 11px; color: #57606a; word-break: break-all; }
-  .card__actions { display: flex; gap: 8px; margin-top: 10px; }
-  .card__details-btn {
-    font-size: 12px; padding: 4px 10px; cursor: pointer;
-    border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; background: transparent; color: inherit;
-  }
-  .drawer .card__details-btn { margin-top: 8px; }
-  .drawer {
-    margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1);
-    max-height: 320px; overflow-y: auto;
-  }
-  .drawer__title { margin: 0 0 8px; font-size: 13px; outline: none; }
-  .drawer__dim { margin: 0 0 10px; }
-  .drawer__dim-head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
-  .drawer__dim-state { margin-left: auto; color: #57606a; font-size: 11px; }
-  .drawer__dim-rationale { margin: 2px 0 0; font-size: 12px; color: #57606a; }
-  .drawer__links { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; }
-  .drawer__links a { font-size: 11px; color: #0969da; }
-  .drawer__subtitle { margin: 12px 0 4px; font-size: 11px; font-weight: 600; color: #57606a; }
-  .drawer__deferred { margin: 0; padding-left: 16px; font-size: 11px; color: #8b949e; }
-  @media (prefers-reduced-motion: no-preference) {
-    .drawer { animation: drawer-in 160ms ease-out; }
-  }
-  @keyframes drawer-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
   @media (prefers-color-scheme: dark) {
     .card { background: #161b22; border-color: rgba(255,255,255,0.12); color: #e6edf3; }
-    .card__confidence, .card__repo, .card__recency,
-    .drawer__dim-state, .drawer__dim-rationale, .drawer__subtitle { color: #9198a1; }
-    .card__retry, .card__details-btn { border-color: rgba(255,255,255,0.24); }
-    .drawer { border-top-color: rgba(255,255,255,0.12); }
-    .drawer__links a { color: #4493f8; }
-    .drawer__deferred { color: #6e7681; }
+    .card__repo, .card__recency { color: #9198a1; }
+    .card__retry { border-color: rgba(255,255,255,0.24); }
   }
+  ${headlineStyles}
+  ${confidenceMeterStyles}
+  ${dimensionRowStyles}
+  ${trustDetailsStyles}
 `
 
 // Single mounted host for the in-page UI. Tracking the host and its Preact
