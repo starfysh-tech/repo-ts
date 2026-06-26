@@ -4,6 +4,7 @@ import { recencyLabel } from './recency'
 import { useWatchToggle } from '../shared/useWatchToggle'
 import { ConfidenceMeter } from '../shared/ConfidenceMeter'
 import { TrustDetails } from '../shared/TrustDetails'
+import { ScopeNote } from '../shared/ScopeNote'
 import { Headline } from '../shared/Headline'
 import { TRUST_DISPLAY, trustAccent, verdictSummary } from '../shared/display'
 
@@ -79,6 +80,7 @@ function Result({ result, target }: { result: AnalysisResult; target: SupportedR
       <Headline icon={display.icon} label={display.label} />
       <ConfidenceMeter level={result.confidence_state} />
       <p class="card__takeaway">{verdictSummary(result)}</p>
+      <ScopeNote />
       <p class="card__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
       <TrustDetails result={result} />
     </div>

@@ -2,9 +2,10 @@ import type { SupportedRepo } from '../content/parseRepoContext'
 import type { CommunityFiles, DimensionContribution, DimensionState, PositiveSignal } from './types'
 
 /**
- * Security hygiene: the repo's published security posture — a security policy
- * and a code of conduct (both resolved via the community profile, which honors
- * the org-default `.github` fallback).
+ * Security docs: whether the repo *publishes* a security policy and a code of
+ * conduct (both resolved via the community profile, which honors the org-default
+ * `.github` fallback). This is a documentation-presence signal — it does NOT
+ * assess the code's actual security posture (hence "docs", not "hygiene").
  *
  * Severity posture: a MISSING security policy is low/contextual, not a flag —
  * most public repos lack one, so its absence simply yields no evidence rather

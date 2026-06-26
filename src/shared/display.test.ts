@@ -21,7 +21,7 @@ describe('verdictSummary', () => {
   it('names the strengths and surfaces a mixed area as a caveat (never drops it)', () => {
     expect(
       verdictSummary(result([dim('provenance', 'strong'), dim('security', 'mixed'), dim('transparency', 'strong')])),
-    ).toBe('Strong provenance and transparency, with mixed security hygiene.')
+    ).toBe('Strong provenance and transparency, with mixed security docs.')
   })
 
   it('contrasts strengths against both mixed and limited areas', () => {
@@ -29,7 +29,7 @@ describe('verdictSummary', () => {
     // (the bug that made a mixed-provenance repo read as unqualified "Strong …").
     expect(
       verdictSummary(result([dim('provenance', 'mixed'), dim('security', 'unknown'), dim('transparency', 'strong')])),
-    ).toBe('Strong transparency, with mixed provenance, but limited security hygiene.')
+    ).toBe('Strong transparency, with mixed provenance, but limited security docs.')
   })
 
   it('leads with a high-severity flag', () => {
@@ -42,7 +42,7 @@ describe('verdictSummary', () => {
 
   it('names the mixed areas when nothing is strong', () => {
     expect(verdictSummary(result([dim('provenance', 'mixed'), dim('security', 'mixed')]))).toBe(
-      'Mixed provenance and security hygiene.',
+      'Mixed provenance and security docs.',
     )
   })
 

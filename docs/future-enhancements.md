@@ -32,6 +32,13 @@ The PoC scores 3 of 7 dimensions. These are shown in the drawer as "not evaluate
 - **Simplicity-aware negative downgrade** — detecting "this is a small, finished repo" (size, file count, age) to contextually suppress missing-item negatives. The PoC instead relies on the confidence model to absorb low evidence, with `caution` reserved for archived. This is the more accurate-but-riskier version of the `is-number` guardrail.
 - Numeric score exposure (PoC shows qualitative states only).
 - Per-ecosystem single-maintainer-concentration thresholds.
+- **Manufactured-credibility guard** (from the security critique) — flag the temporally implausible "newly created **and** already highly active" pattern (recent creation date alongside an established release cadence, many contributors, and active triage), a known supply-chain manufactured-trust tell. The engine currently *rewards* this with strong dimension states. Would surface as a contextual note, never `caution`. Scoring-policy change → fixture re-baseline + `is-number` guardrail recheck + `SCORE_VERSION` bump.
+- **Provenance-gated verdict** (from the security critique) — require provenance to be non-weak/non-mixed before a repo can reach `strong_signals`, so a newly-created / personal-account / mixed-provenance repo can't earn the top verdict on activity (and additive) signals alone. Today `deriveTrustState` takes a strong majority of evidenced core dims, so a mixed provenance can still land STRONG. Needs a PRD decision on the exact gate + fixture re-baseline + guardrail recheck + `SCORE_VERSION` bump.
+
+## Deferred identity & canonicality
+- **Canonical-source / typosquat verification** — link the repo to the package a user is about to install (registry ↔ repo linkage, confusable-name warnings, "is this the official upstream"). The PoC ships only a passive "confirm the official source" nudge in the `ScopeNote`; real verification needs package-registry data and name-similarity analysis (out of client-only scope → backend/enrichment).
+- **Ownership-change / takeover signal** — surface a recent maintainer/owner change or suspicious force-push history (a top account-takeover supply-chain vector that a "responsive, active" repo can mask). Needs history/audit data beyond the unauthenticated REST snapshot.
+- **Release & commit attestation** — signed releases / commits, SLSA provenance, Sigstore — the actual security-*posture* signals, none of which the current "Security docs" dimension checks.
 
 ## Deferred platform reach
 - Firefox and Safari adaptations.
