@@ -57,4 +57,20 @@ describe('scoreResponsiveness — additive recent-close signal', () => {
     expect(c.dimension.dimension_state).toBe('unknown')
     expect(c.flags).toEqual([])
   })
+
+  it('links evidence where the activity is: PR-responsive repo links Pull requests, not Issues', () => {
+    const pulls = Array.from({ length: 6 }, () => pr(RECENT))
+    const c = scoreResponsiveness([], pulls, target, now)
+    const labels = c.dimension.evidence_links.map((l) => l.label)
+    expect(labels).toContain('Pull requests')
+    expect(labels).not.toContain('Issues')
+  })
+
+  it('skips unparseable close dates without counting them (no NaN leak)', () => {
+    // 5 valid recent issue closes (=strong) plus a malformed date that must be
+    // ignored rather than poisoning the recency check.
+    const issues = [...Array.from({ length: 5 }, () => iss(RECENT)), iss('not-a-date')]
+    const c = scoreResponsiveness(issues, [], target, now)
+    expect(c.dimension.dimension_state).toBe('strong')
+  })
 })

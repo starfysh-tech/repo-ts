@@ -57,9 +57,10 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
 
   // Responsiveness is additive/optional — these two calls degrade to empty
   // rather than turning an otherwise-good analysis into an error/rate-limit screen.
-  const issuesRes = await deps.fetchIssues(target)
+  // Independent calls — fetch concurrently (both fire regardless, so this only
+  // trims latency, never changes the request count).
+  const [issuesRes, pullsRes] = await Promise.all([deps.fetchIssues(target), deps.fetchPulls(target)])
   const issues = issuesRes.ok ? issuesRes.issues : []
-  const pullsRes = await deps.fetchPulls(target)
   const pulls = pullsRes.ok ? pullsRes.pulls : []
 
   const contributions: DimensionContribution[] = [

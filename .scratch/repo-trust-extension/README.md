@@ -21,7 +21,7 @@ Phase 1 client-only PoC of an MV3 browser extension that shows explainable trust
 - **Slice 2 — Governance** (5th dimension, **core**, scored from `GET /contributors`: distributed maintenance → strong, bus-factor-1 → weak; emits no flags, so a solo utility is never flagged caution).
 - **Slice 3 — Responsiveness** (6th dimension, **additive**, scored from recent closed `/issues` + `/pulls` activity; lifts toward strong for actively-triaged repos, never demotes).
 
-The engine now scores **6 of 7** dimensions; the suite is **82 tests** (up from 49).
+The engine now scores **6 of 7** dimensions; the suite is **84 tests** (up from 49).
 
 ### What's left / next
 

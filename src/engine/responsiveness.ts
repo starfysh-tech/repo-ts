@@ -15,7 +15,11 @@ export function scoreResponsiveness(
   target: SupportedRepo,
   now: Date,
 ): DimensionContribution {
-  const recent = (at: string | null) => at != null && daysBetween(now, at) <= RESPONSIVE_RECENT_DAYS
+  const recent = (at: string | null) => {
+    if (at == null) return false
+    const days = daysBetween(now, at)
+    return Number.isFinite(days) && days <= RESPONSIVE_RECENT_DAYS
+  }
 
   // GitHub's /issues endpoint includes PRs; drop them here and count PRs
   // separately via `pulls` so a PR-heavy repo isn't double-counted.
@@ -42,15 +46,20 @@ export function scoreResponsiveness(
 
   const state = recentTotal >= RESPONSIVE_ACTIVE_MIN ? 'strong' : 'mixed'
 
+  // Point the evidence where the activity actually is — a repo can be responsive
+  // mostly through PRs (e.g. commander), so an Issues-only link would mislead.
+  const base = `https://github.com/${target.owner}/${target.repo}`
+  const evidence_links = []
+  if (issueCloses > 0) evidence_links.push({ label: 'Issues', url: `${base}/issues` })
+  if (prCloses > 0) evidence_links.push({ label: 'Pull requests', url: `${base}/pulls` })
+
   return {
     dimension: {
       dimension_key: 'responsiveness',
       dimension_state: state,
       confidence_state: 'high',
       triggered_signals: ['recent-activity', state],
-      evidence_links: [
-        { label: 'Issues', url: `https://github.com/${target.owner}/${target.repo}/issues` },
-      ],
+      evidence_links,
       rationale_summary:
         state === 'strong'
           ? 'Issues and pull requests are actively handled.'
