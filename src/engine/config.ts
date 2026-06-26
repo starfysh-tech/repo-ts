@@ -1,8 +1,7 @@
-// Tunable scoring constants — the single place thresholds live. These are
-// provisional for the Provenance tracer (issue 03) and are finalized against
-// the full archetype fixture set when Security + Transparency land (issue 04).
+// Tunable scoring constants — the single place dimension thresholds live,
+// finalized against the committed per-archetype fixtures (`__fixtures__/`).
 
-export const SCORE_VERSION = '0.1.0'
+export const SCORE_VERSION = '0.2.0'
 
 /** A repo younger than this reads as "very new" (a low-evidence signal). */
 export const VERY_NEW_DAYS = 30
@@ -15,10 +14,14 @@ export const DORMANT_DAYS = 730
 /** A repo older than this counts as "established" (a provenance strength). */
 export const ESTABLISHED_DAYS = 365
 
-/** The three dimensions the finished engine evaluates. Confidence is breadth
- *  across all three; a version that wires fewer reports lower confidence, which
- *  is correct — not a bad score. */
-export const PLANNED_DIMENSION_COUNT = 3
+/** Latest published release within this many days reads as active release discipline. */
+export const RELEASE_RECENT_DAYS = 365
+
+/** Confidence is breadth of evidence across dimensions: this many evidenced
+ *  dimensions (of the 4) reads high; one fewer reads medium; ≤1 reads low.
+ *  Deliberately NOT the dimension count — release is additive, so a quiet repo
+ *  without releases keeps its tier instead of being demoted. */
+export const HIGH_CONFIDENCE_THRESHOLD = 3
 
 /** Cache TTL and the threshold past which a result reads as "stale". Within this
  *  window a revisit serves the cached analysis with zero API calls. */

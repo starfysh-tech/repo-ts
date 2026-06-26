@@ -12,8 +12,9 @@ import type {
   RepoFetchResult,
   TrustState,
 } from './types'
-import { PLANNED_DIMENSION_COUNT, SCORE_VERSION } from './config'
+import { HIGH_CONFIDENCE_THRESHOLD, SCORE_VERSION } from './config'
 import { scoreProvenance } from './provenance'
+import { scoreRelease } from './release'
 import { scoreSecurity } from './security'
 import { scoreTransparency } from './transparency'
 
@@ -42,10 +43,17 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
     files = EMPTY_FILES
   }
 
+  // Release is additive/optional — a failure of this 3rd call degrades to empty
+  // rather than turning a successful repo+community fetch into an error/rate-limit
+  // screen.
+  const releasesRes = await deps.fetchReleases(target)
+  const releases = releasesRes.ok ? releasesRes.releases : []
+
   const contributions: DimensionContribution[] = [
     scoreProvenance(repoRes.repo, target, deps.now),
     scoreSecurity(files, target),
     scoreTransparency(files, repoRes.repo, target),
+    scoreRelease(releases, target, deps.now),
   ]
 
   const flags: Flag[] = contributions.flatMap((c) => c.flags)
@@ -102,12 +110,12 @@ function errorOutcome(fetched: Extract<RepoFetchResult, { ok: false }>): Analysi
   }
 }
 
-/** Confidence = how many of the three dimensions produced affirmative evidence:
- *  3 → high, 2 → medium, ≤1 → low. A sparse repo reads low-confidence (limited
- *  evidence), not low-trust. */
+/** Confidence = breadth of evidence across the four dimensions: ≥3 of 4
+ *  evidenced → high, 2 → medium, ≤1 → low. A sparse repo reads low-confidence
+ *  (limited evidence), not low-trust. */
 function deriveConfidence(evidencedCount: number): ConfidenceState {
-  if (evidencedCount >= PLANNED_DIMENSION_COUNT) return 'high'
-  if (evidencedCount === PLANNED_DIMENSION_COUNT - 1) return 'medium'
+  if (evidencedCount >= HIGH_CONFIDENCE_THRESHOLD) return 'high'
+  if (evidencedCount >= HIGH_CONFIDENCE_THRESHOLD - 1) return 'medium'
   return 'low'
 }
 

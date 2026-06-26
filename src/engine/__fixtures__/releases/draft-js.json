@@ -1,0 +1,47 @@
+[
+  {
+    "tag_name": "v0.11.7",
+    "name": "v0.11.7",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2020-08-13T22:01:52Z",
+    "published_at": "2020-08-17T16:40:16Z",
+    "html_url": "https://github.com/facebookarchive/draft-js/releases/tag/v0.11.7"
+  },
+  {
+    "tag_name": "v0.11.6",
+    "name": "v0.11.6",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2020-06-05T08:38:47Z",
+    "published_at": "2020-06-10T18:15:44Z",
+    "html_url": "https://github.com/facebookarchive/draft-js/releases/tag/v0.11.6"
+  },
+  {
+    "tag_name": "v0.11.5",
+    "name": "v0.11.5",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2020-03-26T20:59:56Z",
+    "published_at": "2020-03-27T17:16:53Z",
+    "html_url": "https://github.com/facebookarchive/draft-js/releases/tag/v0.11.5"
+  },
+  {
+    "tag_name": "v0.11.4",
+    "name": "v0.11.4",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2020-01-06T20:40:39Z",
+    "published_at": "2020-01-06T21:37:38Z",
+    "html_url": "https://github.com/facebookarchive/draft-js/releases/tag/v0.11.4"
+  },
+  {
+    "tag_name": "v0.11.3",
+    "name": "v0.11.3",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2020-01-06T21:43:51Z",
+    "published_at": "2020-01-06T21:45:27Z",
+    "html_url": "https://github.com/facebookarchive/draft-js/releases/tag/v0.11.3"
+  }
+]

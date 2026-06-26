@@ -16,11 +16,21 @@ export interface GithubRepo {
   description: string | null
 }
 
+export interface GithubRelease {
+  tag_name: string
+  name: string | null
+  draft: boolean
+  prerelease: boolean
+  created_at: string
+  published_at: string | null
+  html_url: string
+}
+
 // ── Qualitative output states (never numeric scores shown to users) ──────────
 export type TrustState = 'strong_signals' | 'mixed_signals' | 'caution' | 'insufficient_evidence'
 export type ConfidenceState = 'high' | 'medium' | 'low'
 export type DimensionState = 'strong' | 'mixed' | 'weak' | 'unknown'
-export type DimensionKey = 'provenance' | 'security' | 'transparency'
+export type DimensionKey = 'provenance' | 'security' | 'transparency' | 'release'
 export type Severity = 'high' | 'medium' | 'low' | 'very_low'
 
 export interface EvidenceLink {
@@ -91,9 +101,14 @@ export type CommunityFetchResult =
   | { ok: true; profile: CommunityProfileRaw }
   | { ok: false; reason: 'not_found' | 'rate_limited' | 'transient'; resetAt?: number }
 
+export type ReleasesFetchResult =
+  | { ok: true; releases: GithubRelease[] }
+  | { ok: false; reason: 'not_found' | 'rate_limited' | 'transient'; resetAt?: number }
+
 export interface AnalyzeDeps {
   fetchRepo: (target: SupportedRepo) => Promise<RepoFetchResult>
   fetchCommunityProfile: (target: SupportedRepo) => Promise<CommunityFetchResult>
+  fetchReleases: (target: SupportedRepo) => Promise<ReleasesFetchResult>
   /** Injected reference time so age/dormancy and `analyzed_at` are deterministic in tests. */
   now: Date
 }
