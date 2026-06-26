@@ -63,8 +63,11 @@ export async function fetchCommunityProfileLive(target: SupportedRepo): Promise<
 export async function fetchReleasesLive(target: SupportedRepo): Promise<ReleasesFetchResult> {
   const res = await getJson(`/repos/${target.owner}/${target.repo}/releases?per_page=10`)
   if (!res.ok) return res
-  // A 200 with a non-array body (an error object, a proxy's HTML) must not reach
-  // scoreRelease, where releases.filter() would throw and sink the whole analysis.
-  // Degrade to no release evidence, consistent with the additive-dimension posture.
-  return { ok: true, releases: Array.isArray(res.data) ? (res.data as GithubRelease[]) : [] }
+  // A 200 with a non-array body (an error object, a proxy's HTML) — or an array
+  // carrying null/non-object elements — must not reach scoreRelease, where
+  // releases.filter() would throw and sink the whole analysis. Keep only object
+  // elements; degrade anything else to no release evidence.
+  const raw = Array.isArray(res.data) ? res.data : []
+  const releases = raw.filter((r): r is GithubRelease => r != null && typeof r === 'object')
+  return { ok: true, releases }
 }

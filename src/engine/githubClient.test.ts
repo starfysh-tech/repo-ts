@@ -28,6 +28,11 @@ describe('fetchReleasesLive', () => {
     expect(await fetchReleasesLive(target)).toEqual({ ok: true, releases: [] })
   })
 
+  it('drops null/non-object elements from the array (so the scorer never derefs a non-object)', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, [null, { tag_name: 'v1' }, 'oops', 42]))
+    expect(await fetchReleasesLive(target)).toEqual({ ok: true, releases: [{ tag_name: 'v1' }] })
+  })
+
   it('passes a 404 through as a not_found failure', async () => {
     vi.stubGlobal('fetch', mockFetch(404, {}))
     expect(await fetchReleasesLive(target)).toEqual({ ok: false, reason: 'not_found' })
