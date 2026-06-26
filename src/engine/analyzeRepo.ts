@@ -15,6 +15,7 @@ import { HIGH_CONFIDENCE_THRESHOLD, SCORE_VERSION } from './config'
 import { scoreGovernance } from './governance'
 import { scoreProvenance } from './provenance'
 import { scoreRelease } from './release'
+import { scoreResponsiveness } from './responsiveness'
 import { scoreSecurity } from './security'
 import { scoreTransparency } from './transparency'
 
@@ -54,12 +55,20 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
   const contributorsRes = await deps.fetchContributors(target)
   const contributors = contributorsRes.ok ? contributorsRes.contributors : []
 
+  // Responsiveness is additive/optional — these two calls degrade to empty
+  // rather than turning an otherwise-good analysis into an error/rate-limit screen.
+  const issuesRes = await deps.fetchIssues(target)
+  const issues = issuesRes.ok ? issuesRes.issues : []
+  const pullsRes = await deps.fetchPulls(target)
+  const pulls = pullsRes.ok ? pullsRes.pulls : []
+
   const contributions: DimensionContribution[] = [
     scoreProvenance(repoRes.repo, target, deps.now),
     scoreSecurity(files, target),
     scoreTransparency(files, repoRes.repo, target),
     scoreRelease(releases, target, deps.now),
     scoreGovernance(contributors, target),
+    scoreResponsiveness(issues, pulls, target, deps.now),
   ]
 
   const flags: Flag[] = contributions.flatMap((c) => c.flags)

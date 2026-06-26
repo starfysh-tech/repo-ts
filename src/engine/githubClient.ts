@@ -4,8 +4,12 @@ import type {
   CommunityProfileRaw,
   ContributorsFetchResult,
   GithubContributor,
+  GithubIssue,
+  GithubPull,
   GithubRelease,
   GithubRepo,
+  IssuesFetchResult,
+  PullsFetchResult,
   ReleasesFetchResult,
   RepoFetchResult,
 } from './types'
@@ -90,4 +94,24 @@ export async function fetchContributorsLive(target: SupportedRepo): Promise<Cont
       typeof (c as GithubContributor).contributions === 'number',
   )
   return { ok: true, contributors }
+}
+
+export async function fetchIssuesLive(target: SupportedRepo): Promise<IssuesFetchResult> {
+  const res = await getJson(
+    `/repos/${target.owner}/${target.repo}/issues?state=closed&sort=updated&direction=desc&per_page=10`,
+  )
+  if (!res.ok) return res
+  const raw = Array.isArray(res.data) ? res.data : []
+  const issues = raw.filter((i): i is GithubIssue => i != null && typeof i === 'object')
+  return { ok: true, issues }
+}
+
+export async function fetchPullsLive(target: SupportedRepo): Promise<PullsFetchResult> {
+  const res = await getJson(
+    `/repos/${target.owner}/${target.repo}/pulls?state=closed&sort=updated&direction=desc&per_page=10`,
+  )
+  if (!res.ok) return res
+  const raw = Array.isArray(res.data) ? res.data : []
+  const pulls = raw.filter((p): p is GithubPull => p != null && typeof p === 'object')
+  return { ok: true, pulls }
 }
