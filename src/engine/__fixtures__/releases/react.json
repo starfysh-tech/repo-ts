@@ -1,0 +1,47 @@
+[
+  {
+    "tag_name": "v19.2.7",
+    "name": "19.2.7 (June 1st, 2026)",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2026-06-01T17:44:50Z",
+    "published_at": "2026-06-01T18:04:24Z",
+    "html_url": "https://github.com/react/react/releases/tag/v19.2.7"
+  },
+  {
+    "tag_name": "v19.1.8",
+    "name": "19.1.8 (June 1st, 2026)",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2026-06-01T17:44:40Z",
+    "published_at": "2026-06-01T18:04:14Z",
+    "html_url": "https://github.com/react/react/releases/tag/v19.1.8"
+  },
+  {
+    "tag_name": "v19.0.7",
+    "name": "19.0.7 (June 1st, 2026)",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2026-06-01T17:44:35Z",
+    "published_at": "2026-06-01T18:04:09Z",
+    "html_url": "https://github.com/react/react/releases/tag/v19.0.7"
+  },
+  {
+    "tag_name": "v19.2.6",
+    "name": "19.2.6 (May 6th, 2026)",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2026-05-06T14:23:32Z",
+    "published_at": "2026-05-06T16:27:45Z",
+    "html_url": "https://github.com/react/react/releases/tag/v19.2.6"
+  },
+  {
+    "tag_name": "v19.1.7",
+    "name": "19.1.7 (May 6th, 2026)",
+    "draft": false,
+    "prerelease": false,
+    "created_at": "2026-05-06T14:24:18Z",
+    "published_at": "2026-05-06T16:27:39Z",
+    "html_url": "https://github.com/react/react/releases/tag/v19.1.7"
+  }
+]

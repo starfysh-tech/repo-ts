@@ -21,9 +21,9 @@ export const trustDetailsStyles = `
   }
 `
 
-// The four dimensions deferred from this version (shown as "not evaluated" so the
+// The dimensions deferred from this version (shown as "not evaluated" so the
 // user is never misled into thinking they were assessed and passed).
-const DEFERRED_DIMENSIONS = ['Release discipline', 'Governance', 'Supply chain', 'Responsiveness']
+const DEFERRED_DIMENSIONS = ['Governance', 'Supply chain', 'Responsiveness']
 
 // Collapsible "Trust details": the per-dimension breakdown + the deferred
 // dimensions, behind a toggle. Shared by the in-page card and the popup. Default

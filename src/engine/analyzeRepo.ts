@@ -7,13 +7,13 @@ import type {
   CommunityProfileRaw,
   ConfidenceState,
   DimensionContribution,
-  DimensionResult,
   Flag,
   RepoFetchResult,
   TrustState,
 } from './types'
-import { PLANNED_DIMENSION_COUNT, SCORE_VERSION } from './config'
+import { HIGH_CONFIDENCE_THRESHOLD, SCORE_VERSION } from './config'
 import { scoreProvenance } from './provenance'
+import { scoreRelease } from './release'
 import { scoreSecurity } from './security'
 import { scoreTransparency } from './transparency'
 
@@ -42,21 +42,24 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
     files = EMPTY_FILES
   }
 
+  // Release is additive/optional — a failure of this 3rd call degrades to empty
+  // rather than turning a successful repo+community fetch into an error/rate-limit
+  // screen.
+  const releasesRes = await deps.fetchReleases(target)
+  const releases = releasesRes.ok ? releasesRes.releases : []
+
   const contributions: DimensionContribution[] = [
     scoreProvenance(repoRes.repo, target, deps.now),
     scoreSecurity(files, target),
     scoreTransparency(files, repoRes.repo, target),
+    scoreRelease(releases, target, deps.now),
   ]
 
   const flags: Flag[] = contributions.flatMap((c) => c.flags)
   const positives = contributions.flatMap((c) => c.positives)
   const evidenced = contributions.filter((c) => c.hasEvidence)
   const confidence = deriveConfidence(evidenced.length)
-  const trustState = deriveTrustState(
-    evidenced.map((c) => c.dimension),
-    flags,
-    confidence,
-  )
+  const trustState = deriveTrustState(evidenced, flags, confidence)
 
   const result: AnalysisResult = {
     trust_state: trustState,
@@ -102,12 +105,12 @@ function errorOutcome(fetched: Extract<RepoFetchResult, { ok: false }>): Analysi
   }
 }
 
-/** Confidence = how many of the three dimensions produced affirmative evidence:
- *  3 → high, 2 → medium, ≤1 → low. A sparse repo reads low-confidence (limited
- *  evidence), not low-trust. */
+/** Confidence = breadth of evidence across the four dimensions: ≥3 of 4
+ *  evidenced → high, 2 → medium, ≤1 → low. A sparse repo reads low-confidence
+ *  (limited evidence), not low-trust. */
 function deriveConfidence(evidencedCount: number): ConfidenceState {
-  if (evidencedCount >= PLANNED_DIMENSION_COUNT) return 'high'
-  if (evidencedCount === PLANNED_DIMENSION_COUNT - 1) return 'medium'
+  if (evidencedCount >= HIGH_CONFIDENCE_THRESHOLD) return 'high'
+  if (evidencedCount >= HIGH_CONFIDENCE_THRESHOLD - 1) return 'medium'
   return 'low'
 }
 
@@ -115,17 +118,26 @@ function deriveConfidence(evidencedCount: number): ConfidenceState {
  *  dimensions that produced evidence:
  *  1. any high-severity flag (archived) → caution
  *  2. low confidence → insufficient_evidence
- *  3. majority of evidenced dimensions strong and no negative flags → strong_signals
- *  4. otherwise → mixed_signals */
+ *  3. majority of the evidenced CORE dimensions strong and no negative flags → strong_signals
+ *  4. otherwise → mixed_signals
+ *
+ *  Release is additive: a strong release counts toward the strong tally, but it
+ *  is excluded from the majority denominator, so a stale-release `mixed` can never
+ *  dilute and demote an otherwise-strong repo (release lifts, never lowers). */
 function deriveTrustState(
-  evidenced: DimensionResult[],
+  evidenced: DimensionContribution[],
   flags: Flag[],
   confidence: ConfidenceState,
 ): TrustState {
   if (flags.some((f) => f.severity === 'high')) return 'caution'
   if (confidence === 'low') return 'insufficient_evidence'
 
-  const strong = evidenced.filter((d) => d.dimension_state === 'strong').length
-  if (strong > evidenced.length / 2 && flags.length === 0) return 'strong_signals'
+  // Additive dimensions (release) count toward the strong tally but are excluded
+  // from the majority denominator, so they lift the verdict but never demote it.
+  const core = evidenced.filter((c) => !c.additive)
+  const strongCount = (cs: DimensionContribution[]) =>
+    cs.filter((c) => c.dimension.dimension_state === 'strong').length
+  const strong = strongCount(core) + strongCount(evidenced.filter((c) => c.additive))
+  if (strong > core.length / 2 && flags.length === 0) return 'strong_signals'
   return 'mixed_signals'
 }

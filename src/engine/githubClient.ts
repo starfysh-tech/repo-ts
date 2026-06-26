@@ -1,5 +1,12 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
-import type { CommunityFetchResult, CommunityProfileRaw, GithubRepo, RepoFetchResult } from './types'
+import type {
+  CommunityFetchResult,
+  CommunityProfileRaw,
+  GithubRelease,
+  GithubRepo,
+  ReleasesFetchResult,
+  RepoFetchResult,
+} from './types'
 
 const API = 'https://api.github.com'
 const TIMEOUT_MS = 10_000
@@ -51,4 +58,16 @@ export async function fetchRepoLive(target: SupportedRepo): Promise<RepoFetchRes
 export async function fetchCommunityProfileLive(target: SupportedRepo): Promise<CommunityFetchResult> {
   const res = await getJson(`/repos/${target.owner}/${target.repo}/community/profile`)
   return res.ok ? { ok: true, profile: res.data as CommunityProfileRaw } : res
+}
+
+export async function fetchReleasesLive(target: SupportedRepo): Promise<ReleasesFetchResult> {
+  const res = await getJson(`/repos/${target.owner}/${target.repo}/releases?per_page=10`)
+  if (!res.ok) return res
+  // A 200 with a non-array body (an error object, a proxy's HTML) — or an array
+  // carrying null/non-object elements — must not reach scoreRelease, where
+  // releases.filter() would throw and sink the whole analysis. Keep only object
+  // elements; degrade anything else to no release evidence.
+  const raw = Array.isArray(res.data) ? res.data : []
+  const releases = raw.filter((r): r is GithubRelease => r != null && typeof r === 'object')
+  return { ok: true, releases }
 }

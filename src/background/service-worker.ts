@@ -1,5 +1,5 @@
 import { analyzeRepo } from '../engine/analyzeRepo'
-import { fetchCommunityProfileLive, fetchRepoLive } from '../engine/githubClient'
+import { fetchCommunityProfileLive, fetchReleasesLive, fetchRepoLive } from '../engine/githubClient'
 import { readCache, writeCache } from './cache'
 import type { AnalyzeRequest } from '../shared/messages'
 import type { AnalysisOutcome } from '../engine/types'
@@ -18,7 +18,12 @@ async function handleAnalyze(target: SupportedRepo, refresh: boolean): Promise<A
   }
 
   const outcome = await analyzeRepo(
-    { fetchRepo: fetchRepoLive, fetchCommunityProfile: fetchCommunityProfileLive, now },
+    {
+      fetchRepo: fetchRepoLive,
+      fetchCommunityProfile: fetchCommunityProfileLive,
+      fetchReleases: fetchReleasesLive,
+      now,
+    },
     target,
   )
   if (outcome.status === 'ok') await writeCache(target, outcome.result)
