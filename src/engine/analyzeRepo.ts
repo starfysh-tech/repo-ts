@@ -12,6 +12,7 @@ import type {
   TrustState,
 } from './types'
 import { HIGH_CONFIDENCE_THRESHOLD, SCORE_VERSION } from './config'
+import { scoreGovernance } from './governance'
 import { scoreProvenance } from './provenance'
 import { scoreRelease } from './release'
 import { scoreSecurity } from './security'
@@ -48,11 +49,17 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
   const releasesRes = await deps.fetchReleases(target)
   const releases = releasesRes.ok ? releasesRes.releases : []
 
+  // Governance is core, but a failed 5th call must not sink an otherwise-good
+  // analysis — degrade to empty, which reads as no governance evidence.
+  const contributorsRes = await deps.fetchContributors(target)
+  const contributors = contributorsRes.ok ? contributorsRes.contributors : []
+
   const contributions: DimensionContribution[] = [
     scoreProvenance(repoRes.repo, target, deps.now),
     scoreSecurity(files, target),
     scoreTransparency(files, repoRes.repo, target),
     scoreRelease(releases, target, deps.now),
+    scoreGovernance(contributors, target),
   ]
 
   const flags: Flag[] = contributions.flatMap((c) => c.flags)

@@ -1,0 +1,52 @@
+[
+  {
+    "login": "shadowspawn",
+    "type": "User",
+    "contributions": 572
+  },
+  {
+    "login": "tj",
+    "type": "User",
+    "contributions": 183
+  },
+  {
+    "login": "zhiyelee",
+    "type": "User",
+    "contributions": 149
+  },
+  {
+    "login": "dependabot[bot]",
+    "type": "Bot",
+    "contributions": 138
+  },
+  {
+    "login": "abetomo",
+    "type": "User",
+    "contributions": 130
+  },
+  {
+    "login": "SomeKittens",
+    "type": "User",
+    "contributions": 21
+  },
+  {
+    "login": "aweebit",
+    "type": "User",
+    "contributions": 21
+  },
+  {
+    "login": "thethomaseffect",
+    "type": "User",
+    "contributions": 14
+  },
+  {
+    "login": "tonylukasavage",
+    "type": "User",
+    "contributions": 9
+  },
+  {
+    "login": "mojavelinux",
+    "type": "User",
+    "contributions": 8
+  }
+]
