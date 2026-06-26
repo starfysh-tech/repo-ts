@@ -1,8 +1,7 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
 import type { DimensionContribution, DimensionState, GithubRelease, PositiveSignal } from './types'
 import { RELEASE_RECENT_DAYS } from './config'
-
-const DAY_MS = 24 * 60 * 60 * 1000
+import { daysBetween } from './time'
 
 /**
  * Release discipline: does the project cut published releases, and recently?
@@ -36,8 +35,7 @@ export function scoreRelease(
 
   const latest = published[0] // GitHub returns newest first.
   const latestAt = latest.published_at ?? latest.created_at
-  const recencyDays = (now.getTime() - new Date(latestAt).getTime()) / DAY_MS
-  const recent = recencyDays <= RELEASE_RECENT_DAYS
+  const recent = daysBetween(now, latestAt) <= RELEASE_RECENT_DAYS
   const cadence = published.length >= 2
   const state: DimensionState = recent && cadence ? 'strong' : 'mixed'
 

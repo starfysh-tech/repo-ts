@@ -132,6 +132,30 @@ describe('analyzeRepo — full three-dimension engine', () => {
     expect(result.flags).toContainEqual(expect.objectContaining({ key: 'archived', severity: 'high' }))
   })
 
+  // Release is additive: it must lift, never demote. A repo strong on its core
+  // dimensions with only STALE releases (release => mixed) must stay
+  // strong_signals — the mixed release must not dilute the core majority.
+  it('a stale-release (mixed) dimension never demotes an otherwise-strong repo', async () => {
+    const staleReleases: GithubRelease[] = [
+      { tag_name: 'v2.0.0', name: 'v2.0.0', draft: false, prerelease: false,
+        created_at: '2019-01-01T00:00:00Z', published_at: '2019-01-01T00:00:00Z', html_url: 'x' },
+      { tag_name: 'v1.0.0', name: 'v1.0.0', draft: false, prerelease: false,
+        created_at: '2018-01-01T00:00:00Z', published_at: '2018-01-01T00:00:00Z', html_url: 'x' },
+    ]
+    const outcome = await analyzeRepo(
+      {
+        fetchRepo: async () => ({ ok: true, repo: reactRepo as GithubRepo }),
+        fetchCommunityProfile: async () => ({ ok: true, profile: reactCp as CommunityProfileRaw }),
+        fetchReleases: async () => ({ ok: true, releases: staleReleases }),
+        now: NOW,
+      },
+      target('facebook', 'react'),
+    )
+    const result = expectOk(outcome)
+    expect(dimState(outcome, 'release')).toBe('mixed')
+    expect(result.trust_state).toBe('strong_signals')
+  })
+
   it('does NOT penalize an org-default .github fallback (got keeps its CoC/contributing)', async () => {
     const a = ARCHETYPES.find((x) => x.name === 'got')!
     const result = expectOk(await analyze(a))

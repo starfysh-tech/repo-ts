@@ -1,10 +1,7 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
 import type { DimensionContribution, DimensionState, Flag, GithubRepo, PositiveSignal } from './types'
 import { DORMANT_DAYS, ESTABLISHED_DAYS, VERY_NEW_DAYS } from './config'
-
-const DAY_MS = 24 * 60 * 60 * 1000
-const daysBetween = (later: Date, earlier: string) =>
-  (later.getTime() - new Date(earlier).getTime()) / DAY_MS
+import { daysBetween } from './time'
 
 /**
  * Provenance: who published this and how established it is. License presence,

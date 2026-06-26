@@ -123,8 +123,12 @@ function deriveConfidence(evidencedCount: number): ConfidenceState {
  *  dimensions that produced evidence:
  *  1. any high-severity flag (archived) → caution
  *  2. low confidence → insufficient_evidence
- *  3. majority of evidenced dimensions strong and no negative flags → strong_signals
- *  4. otherwise → mixed_signals */
+ *  3. majority of the evidenced CORE dimensions strong and no negative flags → strong_signals
+ *  4. otherwise → mixed_signals
+ *
+ *  Release is additive: a strong release counts toward the strong tally, but it
+ *  is excluded from the majority denominator, so a stale-release `mixed` can never
+ *  dilute and demote an otherwise-strong repo (release lifts, never lowers). */
 function deriveTrustState(
   evidenced: DimensionResult[],
   flags: Flag[],
@@ -133,7 +137,11 @@ function deriveTrustState(
   if (flags.some((f) => f.severity === 'high')) return 'caution'
   if (confidence === 'low') return 'insufficient_evidence'
 
-  const strong = evidenced.filter((d) => d.dimension_state === 'strong').length
-  if (strong > evidenced.length / 2 && flags.length === 0) return 'strong_signals'
+  const core = evidenced.filter((d) => d.dimension_key !== 'release')
+  const release = evidenced.find((d) => d.dimension_key === 'release')
+  const strong =
+    core.filter((d) => d.dimension_state === 'strong').length +
+    (release?.dimension_state === 'strong' ? 1 : 0)
+  if (strong > core.length / 2 && flags.length === 0) return 'strong_signals'
   return 'mixed_signals'
 }
