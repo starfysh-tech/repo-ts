@@ -36,6 +36,8 @@ const STYLES = `
 const openWatchlist = () =>
   chrome.tabs.create({ url: chrome.runtime.getURL('src/watchlist/index.html') })
 
+const openSettings = () => chrome.runtime.openOptionsPage()
+
 type View =
   | { kind: 'loading' }
   | { kind: 'unsupported' }
@@ -83,6 +85,9 @@ function Popup() {
       <div class="pp__actions">
         <button type="button" onClick={openWatchlist}>
           Open watchlist
+        </button>
+        <button type="button" onClick={openSettings}>
+          Settings
         </button>
       </div>
     </main>

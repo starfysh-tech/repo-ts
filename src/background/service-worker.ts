@@ -1,12 +1,6 @@
 import { analyzeRepo } from '../engine/analyzeRepo'
-import {
-  fetchCommunityProfileLive,
-  fetchContributorsLive,
-  fetchIssuesLive,
-  fetchPullsLive,
-  fetchReleasesLive,
-  fetchRepoLive,
-} from '../engine/githubClient'
+import { createGithubClient } from '../engine/githubClient'
+import { getSettings } from '../shared/settings'
 import { readCache, writeCache } from './cache'
 import type { AnalyzeRequest } from '../shared/messages'
 import type { AnalysisOutcome } from '../engine/types'
@@ -24,18 +18,14 @@ async function handleAnalyze(target: SupportedRepo, refresh: boolean): Promise<A
     if (cached) return { status: 'ok', result: cached }
   }
 
-  const outcome = await analyzeRepo(
-    {
-      fetchRepo: fetchRepoLive,
-      fetchCommunityProfile: fetchCommunityProfileLive,
-      fetchReleases: fetchReleasesLive,
-      fetchContributors: fetchContributorsLive,
-      fetchIssues: fetchIssuesLive,
-      fetchPulls: fetchPullsLive,
-      now,
-    },
-    target,
-  )
+  // Read the optional PAT per analysis so a token saved/cleared mid-session
+  // takes effect on the next request (no worker restart needed). The token only
+  // raises the rate limit; it never changes scoring, so it stays out of the
+  // cache key.
+  const { pat } = await getSettings()
+  const client = createGithubClient(pat)
+
+  const outcome = await analyzeRepo({ ...client, now }, target)
   if (outcome.status === 'ok') await writeCache(target, outcome.result)
   return outcome
 }
