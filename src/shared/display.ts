@@ -90,11 +90,17 @@ export function verdictSummary(result: AnalysisResult): string {
   const dims = result.dimension_results ?? []
   const titleOf = (d: DimensionResult) => (DIM_TITLE[d.dimension_key] ?? d.dimension_key ?? '').toLowerCase()
   const strong = dims.filter((d) => d.dimension_state === 'strong').map(titleOf)
+  const mixed = dims.filter((d) => d.dimension_state === 'mixed').map(titleOf)
   const limited = dims.filter((d) => d.dimension_state === 'weak' || d.dimension_state === 'unknown').map(titleOf)
 
+  // Surface every non-strong evidenced area, not just strong/limited: a `mixed`
+  // dimension (e.g. mixed provenance) must not silently vanish from the takeaway,
+  // which would overstate the verdict. Compose the clauses present.
+  let out = ''
+  if (strong.length) out += `strong ${joinWords(strong)}`
+  if (mixed.length) out += `${out ? ', with ' : ''}mixed ${joinWords(mixed)}`
+  if (limited.length) out += `${out ? ', but ' : ''}limited ${joinWords(limited)}`
+
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
-  if (strong.length && limited.length) return cap(`strong ${joinWords(strong)}, but limited ${joinWords(limited)}.`)
-  if (strong.length) return cap(`strong ${joinWords(strong)}.`)
-  if (limited.length) return cap(`limited ${joinWords(limited)}.`)
-  return 'Mixed evidence across the evaluated areas.'
+  return out ? cap(`${out}.`) : 'Mixed evidence across the evaluated areas.'
 }
