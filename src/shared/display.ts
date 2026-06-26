@@ -71,6 +71,7 @@ export const DIM_TITLE: Record<DimensionKey, string> = {
   security: 'Security hygiene',
   transparency: 'Transparency',
   release: 'Release discipline',
+  governance: 'Governance',
 }
 
 const joinWords = (xs: string[]): string =>

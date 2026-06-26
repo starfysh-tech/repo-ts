@@ -1,7 +1,7 @@
 // Tunable scoring constants — the single place dimension thresholds live,
 // finalized against the committed per-archetype fixtures (`__fixtures__/`).
 
-export const SCORE_VERSION = '0.2.0'
+export const SCORE_VERSION = '0.3.0'
 
 /** A repo younger than this reads as "very new" (a low-evidence signal). */
 export const VERY_NEW_DAYS = 30
@@ -16,6 +16,12 @@ export const ESTABLISHED_DAYS = 365
 
 /** Latest published release within this many days reads as active release discipline. */
 export const RELEASE_RECENT_DAYS = 365
+
+/** Governance: this many distinct human contributors (with no single one dominating)
+ *  reads as distributed maintenance. */
+export const GOV_DISTRIBUTED_MIN = 5
+/** A top contributor at/above this share of observed commits reads as bus-factor-1. */
+export const GOV_DOMINANT_SHARE = 0.85
 
 /** Confidence is breadth of evidence across dimensions: this many evidenced
  *  dimensions (of the 4) reads high; one fewer reads medium; ≤1 reads low.

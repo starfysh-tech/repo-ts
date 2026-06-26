@@ -26,11 +26,17 @@ export interface GithubRelease {
   html_url: string
 }
 
+export interface GithubContributor {
+  login: string
+  type: string
+  contributions: number
+}
+
 // ── Qualitative output states (never numeric scores shown to users) ──────────
 export type TrustState = 'strong_signals' | 'mixed_signals' | 'caution' | 'insufficient_evidence'
 export type ConfidenceState = 'high' | 'medium' | 'low'
 export type DimensionState = 'strong' | 'mixed' | 'weak' | 'unknown'
-export type DimensionKey = 'provenance' | 'security' | 'transparency' | 'release'
+export type DimensionKey = 'provenance' | 'security' | 'transparency' | 'release' | 'governance'
 export type Severity = 'high' | 'medium' | 'low' | 'very_low'
 
 export interface EvidenceLink {
@@ -105,10 +111,15 @@ export type ReleasesFetchResult =
   | { ok: true; releases: GithubRelease[] }
   | { ok: false; reason: 'not_found' | 'rate_limited' | 'transient'; resetAt?: number }
 
+export type ContributorsFetchResult =
+  | { ok: true; contributors: GithubContributor[] }
+  | { ok: false; reason: 'not_found' | 'rate_limited' | 'transient'; resetAt?: number }
+
 export interface AnalyzeDeps {
   fetchRepo: (target: SupportedRepo) => Promise<RepoFetchResult>
   fetchCommunityProfile: (target: SupportedRepo) => Promise<CommunityFetchResult>
   fetchReleases: (target: SupportedRepo) => Promise<ReleasesFetchResult>
+  fetchContributors: (target: SupportedRepo) => Promise<ContributorsFetchResult>
   /** Injected reference time so age/dormancy and `analyzed_at` are deterministic in tests. */
   now: Date
 }

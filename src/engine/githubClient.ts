@@ -2,6 +2,8 @@ import type { SupportedRepo } from '../content/parseRepoContext'
 import type {
   CommunityFetchResult,
   CommunityProfileRaw,
+  ContributorsFetchResult,
+  GithubContributor,
   GithubRelease,
   GithubRepo,
   ReleasesFetchResult,
@@ -70,4 +72,12 @@ export async function fetchReleasesLive(target: SupportedRepo): Promise<Releases
   const raw = Array.isArray(res.data) ? res.data : []
   const releases = raw.filter((r): r is GithubRelease => r != null && typeof r === 'object')
   return { ok: true, releases }
+}
+
+export async function fetchContributorsLive(target: SupportedRepo): Promise<ContributorsFetchResult> {
+  const res = await getJson(`/repos/${target.owner}/${target.repo}/contributors?per_page=10`)
+  if (!res.ok) return res
+  const raw = Array.isArray(res.data) ? res.data : []
+  const contributors = raw.filter((c): c is GithubContributor => c != null && typeof c === 'object')
+  return { ok: true, contributors }
 }

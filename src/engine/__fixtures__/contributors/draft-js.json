@@ -1,0 +1,52 @@
+[
+  {
+    "login": "flarnie",
+    "type": "User",
+    "contributions": 105
+  },
+  {
+    "login": "mrkev",
+    "type": "User",
+    "contributions": 100
+  },
+  {
+    "login": "mitermayer",
+    "type": "User",
+    "contributions": 68
+  },
+  {
+    "login": "sophiebits",
+    "type": "User",
+    "contributions": 47
+  },
+  {
+    "login": "zpao",
+    "type": "User",
+    "contributions": 41
+  },
+  {
+    "login": "niveditc",
+    "type": "User",
+    "contributions": 39
+  },
+  {
+    "login": "pieterv",
+    "type": "User",
+    "contributions": 14
+  },
+  {
+    "login": "Daniel15",
+    "type": "User",
+    "contributions": 14
+  },
+  {
+    "login": "davidchang",
+    "type": "User",
+    "contributions": 11
+  },
+  {
+    "login": "dependabot[bot]",
+    "type": "Bot",
+    "contributions": 10
+  }
+]

@@ -7,6 +7,7 @@ import type {
   ConfidenceState,
   DimensionKey,
   DimensionState,
+  GithubContributor,
   GithubRelease,
   GithubRepo,
   RepoFetchResult,
@@ -38,6 +39,14 @@ import commanderRel from './__fixtures__/releases/commander.json'
 import hexToRgbRel from './__fixtures__/releases/hex-to-rgb.json'
 import testRepoRel from './__fixtures__/releases/test-repo.json'
 
+import reactCon from './__fixtures__/contributors/react.json'
+import gotCon from './__fixtures__/contributors/got.json'
+import isNumberCon from './__fixtures__/contributors/is-number.json'
+import draftJsCon from './__fixtures__/contributors/draft-js.json'
+import commanderCon from './__fixtures__/contributors/commander.json'
+import hexToRgbCon from './__fixtures__/contributors/hex-to-rgb.json'
+import testRepoCon from './__fixtures__/contributors/test-repo.json'
+
 // Fixed reference time so age/dormancy and analyzed_at are deterministic.
 const NOW = new Date('2026-06-24T00:00:00Z')
 
@@ -48,6 +57,7 @@ interface Archetype {
   repo: unknown
   community: unknown
   releases: unknown
+  contributors: unknown
   target: SupportedRepo
   trust: TrustState
   confidence: ConfidenceState
@@ -55,24 +65,25 @@ interface Archetype {
   security: DimensionState
   transparency: DimensionState
   release: DimensionState
+  governance: DimensionState
 }
 
 // Expectations finalized against the committed real-API fixtures (issue 04).
 const ARCHETYPES: Archetype[] = [
-  { name: 'react', repo: reactRepo, community: reactCp, releases: reactRel, target: target('facebook', 'react'),
-    trust: 'strong_signals', confidence: 'high', provenance: 'strong', security: 'mixed', transparency: 'strong', release: 'strong' },
-  { name: 'got', repo: gotRepo, community: gotCp, releases: gotRel, target: target('sindresorhus', 'got'),
-    trust: 'strong_signals', confidence: 'high', provenance: 'strong', security: 'mixed', transparency: 'strong', release: 'strong' },
-  { name: 'commander', repo: commanderRepo, community: commanderCp, releases: commanderRel, target: target('tj', 'commander.js'),
-    trust: 'strong_signals', confidence: 'high', provenance: 'strong', security: 'unknown', transparency: 'strong', release: 'strong' },
-  { name: 'is-number', repo: isNumberRepo, community: isNumberCp, releases: isNumberRel, target: target('jonschlinkert', 'is-number'),
-    trust: 'mixed_signals', confidence: 'medium', provenance: 'mixed', security: 'unknown', transparency: 'strong', release: 'unknown' },
-  { name: 'draft-js', repo: draftJsRepo, community: draftJsCp, releases: draftJsRel, target: target('facebookarchive', 'draft-js'),
-    trust: 'caution', confidence: 'high', provenance: 'mixed', security: 'mixed', transparency: 'strong', release: 'mixed' },
-  { name: 'hex-to-rgb', repo: hexToRgbRepo, community: hexToRgbCp, releases: hexToRgbRel, target: target('The-Silent-Voyager-coder', 'hex-to-rgb-converter'),
-    trust: 'insufficient_evidence', confidence: 'low', provenance: 'weak', security: 'unknown', transparency: 'mixed', release: 'unknown' },
-  { name: 'test-repo', repo: testRepoRepo, community: testRepoCp, releases: testRepoRel, target: target('MaxGoodfella', 'test-repo'),
-    trust: 'insufficient_evidence', confidence: 'low', provenance: 'weak', security: 'unknown', transparency: 'unknown', release: 'unknown' },
+  { name: 'react', repo: reactRepo, community: reactCp, releases: reactRel, contributors: reactCon, target: target('facebook', 'react'),
+    trust: 'strong_signals', confidence: 'high', provenance: 'strong', security: 'mixed', transparency: 'strong', release: 'strong', governance: 'strong' },
+  { name: 'got', repo: gotRepo, community: gotCp, releases: gotRel, contributors: gotCon, target: target('sindresorhus', 'got'),
+    trust: 'strong_signals', confidence: 'high', provenance: 'strong', security: 'mixed', transparency: 'strong', release: 'strong', governance: 'strong' },
+  { name: 'commander', repo: commanderRepo, community: commanderCp, releases: commanderRel, contributors: commanderCon, target: target('tj', 'commander.js'),
+    trust: 'strong_signals', confidence: 'high', provenance: 'strong', security: 'unknown', transparency: 'strong', release: 'strong', governance: 'strong' },
+  { name: 'is-number', repo: isNumberRepo, community: isNumberCp, releases: isNumberRel, contributors: isNumberCon, target: target('jonschlinkert', 'is-number'),
+    trust: 'mixed_signals', confidence: 'high', provenance: 'mixed', security: 'unknown', transparency: 'strong', release: 'unknown', governance: 'weak' },
+  { name: 'draft-js', repo: draftJsRepo, community: draftJsCp, releases: draftJsRel, contributors: draftJsCon, target: target('facebookarchive', 'draft-js'),
+    trust: 'caution', confidence: 'high', provenance: 'mixed', security: 'mixed', transparency: 'strong', release: 'mixed', governance: 'strong' },
+  { name: 'hex-to-rgb', repo: hexToRgbRepo, community: hexToRgbCp, releases: hexToRgbRel, contributors: hexToRgbCon, target: target('The-Silent-Voyager-coder', 'hex-to-rgb-converter'),
+    trust: 'insufficient_evidence', confidence: 'low', provenance: 'weak', security: 'unknown', transparency: 'mixed', release: 'unknown', governance: 'unknown' },
+  { name: 'test-repo', repo: testRepoRepo, community: testRepoCp, releases: testRepoRel, contributors: testRepoCon, target: target('MaxGoodfella', 'test-repo'),
+    trust: 'insufficient_evidence', confidence: 'low', provenance: 'weak', security: 'unknown', transparency: 'unknown', release: 'unknown', governance: 'unknown' },
 ]
 
 async function analyze(a: Archetype): Promise<AnalysisOutcome> {
@@ -81,6 +92,7 @@ async function analyze(a: Archetype): Promise<AnalysisOutcome> {
       fetchRepo: async () => ({ ok: true, repo: a.repo as GithubRepo }),
       fetchCommunityProfile: async () => ({ ok: true, profile: a.community as CommunityProfileRaw }),
       fetchReleases: async () => ({ ok: true, releases: a.releases as GithubRelease[] }),
+      fetchContributors: async () => ({ ok: true, contributors: a.contributors as GithubContributor[] }),
       now: NOW,
     },
     a.target,
@@ -98,9 +110,9 @@ const dimState = (outcome: AnalysisOutcome, key: DimensionKey): DimensionState =
 describe('analyzeRepo — full three-dimension engine', () => {
   it('stamps every analysis with the score version and the injected time', async () => {
     const result = expectOk(await analyze(ARCHETYPES[0]))
-    expect(result.score_version).toBe('0.2.0')
+    expect(result.score_version).toBe('0.3.0')
     expect(result.analyzed_at).toBe(NOW.toISOString())
-    expect(result.dimension_results.map((d) => d.dimension_key)).toEqual(['provenance', 'security', 'transparency', 'release'])
+    expect(result.dimension_results.map((d) => d.dimension_key)).toEqual(['provenance', 'security', 'transparency', 'release', 'governance'])
   })
 
   for (const a of ARCHETYPES) {
@@ -113,6 +125,7 @@ describe('analyzeRepo — full three-dimension engine', () => {
       expect(dimState(outcome, 'security')).toBe(a.security)
       expect(dimState(outcome, 'transparency')).toBe(a.transparency)
       expect(dimState(outcome, 'release')).toBe(a.release)
+      expect(dimState(outcome, 'governance')).toBe(a.governance)
     })
   }
 
@@ -147,6 +160,7 @@ describe('analyzeRepo — full three-dimension engine', () => {
         fetchRepo: async () => ({ ok: true, repo: reactRepo as GithubRepo }),
         fetchCommunityProfile: async () => ({ ok: true, profile: reactCp as CommunityProfileRaw }),
         fetchReleases: async () => ({ ok: true, releases: staleReleases }),
+        fetchContributors: async () => ({ ok: true, contributors: [] }),
         now: NOW,
       },
       target('facebook', 'react'),
@@ -180,6 +194,7 @@ describe('analyzeRepo — non-verdict outcomes', () => {
         fetchRepo: async () => repo,
         fetchCommunityProfile: async () => community,
         fetchReleases: async () => ({ ok: true, releases: [] }),
+        fetchContributors: async () => ({ ok: true, contributors: [] }),
         now: NOW,
       },
       target('o', 'r'),
@@ -195,6 +210,7 @@ describe('analyzeRepo — non-verdict outcomes', () => {
           return { ok: true, profile: {} }
         },
         fetchReleases: async () => ({ ok: true, releases: [] }),
+        fetchContributors: async () => ({ ok: true, contributors: [] }),
         now: NOW,
       },
       target('o', 'r'),
@@ -230,6 +246,7 @@ describe('evidence links — only for observed signals (never a 404)', () => {
         fetchRepo: async () => ({ ok: true, repo: repo as GithubRepo }),
         fetchCommunityProfile: async () => ({ ok: true, profile }),
         fetchReleases: async () => ({ ok: true, releases: [] }),
+        fetchContributors: async () => ({ ok: true, contributors: [] }),
         now: NOW,
       },
       target('o', 'r'),

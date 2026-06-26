@@ -1,5 +1,10 @@
 import { analyzeRepo } from '../engine/analyzeRepo'
-import { fetchCommunityProfileLive, fetchReleasesLive, fetchRepoLive } from '../engine/githubClient'
+import {
+  fetchCommunityProfileLive,
+  fetchContributorsLive,
+  fetchReleasesLive,
+  fetchRepoLive,
+} from '../engine/githubClient'
 import { readCache, writeCache } from './cache'
 import type { AnalyzeRequest } from '../shared/messages'
 import type { AnalysisOutcome } from '../engine/types'
@@ -22,6 +27,7 @@ async function handleAnalyze(target: SupportedRepo, refresh: boolean): Promise<A
       fetchRepo: fetchRepoLive,
       fetchCommunityProfile: fetchCommunityProfileLive,
       fetchReleases: fetchReleasesLive,
+      fetchContributors: fetchContributorsLive,
       now,
     },
     target,
