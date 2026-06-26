@@ -6,7 +6,7 @@ import { defineManifest } from '@crxjs/vite-plugin'
 export default defineManifest({
   manifest_version: 3,
   name: 'Repo Trust',
-  version: '0.1.0',
+  version: '0.2.0',
   description: 'Explainable trust signals on public GitHub repository pages.',
   // `activeTab` lets the popup read the current tab's URL (granted on the user's
   // action click); narrower than `tabs`, which would expose every tab.
@@ -16,6 +16,10 @@ export default defineManifest({
     default_popup: 'src/popup/index.html',
     default_title: 'Repo Trust',
   },
+  // Standalone extension page for optional settings (e.g. the GitHub PAT).
+  // Opened from the popup, not injected into github.com, so it is not a
+  // web_accessible_resource.
+  options_page: 'src/settings/index.html',
   // Entry basenames are deliberately distinct (not both `index.ts`): same-named
   // entries collide on the emitted `index.ts-<hash>.js` chunk and CRXJS can wire
   // the service-worker loader to the wrong one (loading the content script into
