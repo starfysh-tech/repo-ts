@@ -32,10 +32,11 @@ export function scoreGovernance(
     }
   }
 
-  // The /contributors list is ordered by contribution count, so users[0] is the
-  // top contributor. topShare measures how concentrated maintenance is.
+  // topShare measures how concentrated maintenance is. Find the max defensively
+  // rather than assuming users[0] is the top (live API sorts, fixtures/cache may not).
   const total = users.reduce((s, u) => s + (u.contributions || 0), 0)
-  const topShare = total > 0 ? (users[0].contributions || 0) / total : 1
+  const maxContributions = users.reduce((max, u) => Math.max(max, u.contributions || 0), 0)
+  const topShare = total > 0 ? maxContributions / total : 1
   const distributed = users.length >= GOV_DISTRIBUTED_MIN && topShare < GOV_DOMINANT_SHARE
   const dominated = topShare >= GOV_DOMINANT_SHARE
   const state: DimensionState = distributed ? 'strong' : dominated ? 'weak' : 'mixed'

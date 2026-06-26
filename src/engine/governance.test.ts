@@ -64,4 +64,10 @@ describe('scoreGovernance', () => {
     expect(r.dimension.dimension_state).toBe('unknown')
     expect(r.flags).toEqual([])
   })
+
+  it('detects domination regardless of array order (does not assume sorted)', () => {
+    // The dominant contributor is NOT first; topShare must still find it.
+    const r = scoreGovernance([usr('a', 3), usr('boss', 95), usr('b', 2)], target)
+    expect(r.dimension.dimension_state).toBe('weak')
+  })
 })

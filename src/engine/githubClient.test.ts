@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { fetchReleasesLive } from './githubClient'
+import { fetchContributorsLive, fetchReleasesLive } from './githubClient'
 import type { SupportedRepo } from '../content/parseRepoContext'
 
 const target: SupportedRepo = { kind: 'repo', owner: 'o', repo: 'r' }
@@ -36,5 +36,30 @@ describe('fetchReleasesLive', () => {
   it('passes a 404 through as a not_found failure', async () => {
     vi.stubGlobal('fetch', mockFetch(404, {}))
     expect(await fetchReleasesLive(target)).toEqual({ ok: false, reason: 'not_found' })
+  })
+})
+
+describe('fetchContributorsLive', () => {
+  it('keeps only well-formed contributor objects, dropping malformed elements', async () => {
+    // Only the first is a valid GithubContributor; the rest must be filtered so a
+    // string `contributions` can't skew the governance share math.
+    vi.stubGlobal(
+      'fetch',
+      mockFetch(200, [
+        { login: 'a', type: 'User', contributions: 50 },
+        { login: 'b', type: 'User', contributions: '5' }, // wrong-typed
+        { login: 'c' }, // missing fields
+        null,
+      ]),
+    )
+    expect(await fetchContributorsLive(target)).toEqual({
+      ok: true,
+      contributors: [{ login: 'a', type: 'User', contributions: 50 }],
+    })
+  })
+
+  it('degrades a non-array 200 body to empty contributors (e.g. a 202 "computing" object)', async () => {
+    vi.stubGlobal('fetch', mockFetch(200, { message: 'computing' }))
+    expect(await fetchContributorsLive(target)).toEqual({ ok: true, contributors: [] })
   })
 })

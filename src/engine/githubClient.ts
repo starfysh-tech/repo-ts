@@ -78,6 +78,16 @@ export async function fetchContributorsLive(target: SupportedRepo): Promise<Cont
   const res = await getJson(`/repos/${target.owner}/${target.repo}/contributors?per_page=10`)
   if (!res.ok) return res
   const raw = Array.isArray(res.data) ? res.data : []
-  const contributors = raw.filter((c): c is GithubContributor => c != null && typeof c === 'object')
+  // Field-validate at the read seam: a malformed element (e.g. a string
+  // `contributions`) would otherwise skew the governance share math. Only
+  // well-formed contributors reach the scorer.
+  const contributors = raw.filter(
+    (c): c is GithubContributor =>
+      c != null &&
+      typeof c === 'object' &&
+      typeof (c as GithubContributor).login === 'string' &&
+      typeof (c as GithubContributor).type === 'string' &&
+      typeof (c as GithubContributor).contributions === 'number',
+  )
   return { ok: true, contributors }
 }
