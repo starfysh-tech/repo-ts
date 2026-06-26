@@ -14,10 +14,12 @@ export function scoreRelease(
   target: SupportedRepo,
   now: Date,
 ): DimensionContribution {
-  // Unauth API never returns drafts, but guard anyway.
-  const published = releases.filter((r) => !r.draft)
+  // Stable, published releases only: drafts aren't public, and prereleases aren't
+  // the project's release-discipline signal (a repo whose only recent activity is
+  // prerelease churn shouldn't read as a disciplined releaser).
+  const stable = releases.filter((r) => !r.draft && !r.prerelease)
 
-  if (published.length === 0) {
+  if (stable.length === 0) {
     return {
       dimension: {
         dimension_key: 'release',
@@ -28,15 +30,22 @@ export function scoreRelease(
         rationale_summary: 'No published releases found.',
       },
       hasEvidence: false,
+      additive: true,
       flags: [],
       positives: [],
     }
   }
 
-  const latest = published[0] // GitHub returns newest first.
-  const latestAt = latest.published_at ?? latest.created_at
-  const recent = daysBetween(now, latestAt) <= RELEASE_RECENT_DAYS
-  const cadence = published.length >= 2
+  // The /releases list is ordered by creation, not publish date, so the head is
+  // not necessarily the most-recently-published. Take the smallest age across all
+  // stable releases; an unparseable date contributes Infinity (ignored), and if
+  // every date is unparseable the result degrades to "not recent" rather than NaN.
+  const latestAgeDays = stable.reduce((min, r) => {
+    const age = daysBetween(now, r.published_at ?? r.created_at)
+    return Number.isFinite(age) && age < min ? age : min
+  }, Infinity)
+  const recent = latestAgeDays <= RELEASE_RECENT_DAYS
+  const cadence = stable.length >= 2
   const state: DimensionState = recent && cadence ? 'strong' : 'mixed'
 
   const positives: PositiveSignal[] = [{ key: 'releases', label: 'Published releases' }]
@@ -51,13 +60,14 @@ export function scoreRelease(
         { label: 'Releases', url: `https://github.com/${target.owner}/${target.repo}/releases` },
       ],
       rationale_summary:
-        state === 'strong'
+        recent && cadence
           ? 'Regular published releases; the latest is recent.'
-          : !recent
-            ? 'Has published releases, but the latest is old.'
-            : 'Has a recent release.',
+          : recent
+            ? 'Has a recent release.'
+            : 'Has published releases, but the latest is old.',
     },
     hasEvidence: true,
+    additive: true,
     flags: [],
     positives,
   }

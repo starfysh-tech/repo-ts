@@ -7,7 +7,6 @@ import type {
   CommunityProfileRaw,
   ConfidenceState,
   DimensionContribution,
-  DimensionResult,
   Flag,
   RepoFetchResult,
   TrustState,
@@ -60,11 +59,7 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
   const positives = contributions.flatMap((c) => c.positives)
   const evidenced = contributions.filter((c) => c.hasEvidence)
   const confidence = deriveConfidence(evidenced.length)
-  const trustState = deriveTrustState(
-    evidenced.map((c) => c.dimension),
-    flags,
-    confidence,
-  )
+  const trustState = deriveTrustState(evidenced, flags, confidence)
 
   const result: AnalysisResult = {
     trust_state: trustState,
@@ -130,18 +125,19 @@ function deriveConfidence(evidencedCount: number): ConfidenceState {
  *  is excluded from the majority denominator, so a stale-release `mixed` can never
  *  dilute and demote an otherwise-strong repo (release lifts, never lowers). */
 function deriveTrustState(
-  evidenced: DimensionResult[],
+  evidenced: DimensionContribution[],
   flags: Flag[],
   confidence: ConfidenceState,
 ): TrustState {
   if (flags.some((f) => f.severity === 'high')) return 'caution'
   if (confidence === 'low') return 'insufficient_evidence'
 
-  const core = evidenced.filter((d) => d.dimension_key !== 'release')
-  const release = evidenced.find((d) => d.dimension_key === 'release')
-  const strong =
-    core.filter((d) => d.dimension_state === 'strong').length +
-    (release?.dimension_state === 'strong' ? 1 : 0)
+  // Additive dimensions (release) count toward the strong tally but are excluded
+  // from the majority denominator, so they lift the verdict but never demote it.
+  const core = evidenced.filter((c) => !c.additive)
+  const strongCount = (cs: DimensionContribution[]) =>
+    cs.filter((c) => c.dimension.dimension_state === 'strong').length
+  const strong = strongCount(core) + strongCount(evidenced.filter((c) => c.additive))
   if (strong > core.length / 2 && flags.length === 0) return 'strong_signals'
   return 'mixed_signals'
 }

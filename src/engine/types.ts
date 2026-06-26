@@ -130,6 +130,9 @@ export interface DimensionContribution {
   /** Did this dimension observe affirmative evidence? Drives confidence breadth
    *  (a sparse repo reads low-confidence, not bad). */
   hasEvidence: boolean
+  /** Additive dimension: it can lift the top-level verdict toward strong but must
+   *  never demote it — excluded from the trust-majority denominator. (Release.) */
+  additive?: boolean
   flags: Flag[]
   positives: PositiveSignal[]
 }
