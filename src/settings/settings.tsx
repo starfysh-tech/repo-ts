@@ -59,7 +59,9 @@ function Settings() {
 
   // try/finally so a storage-write rejection (quota, torn-down options page)
   // can't leave the buttons permanently disabled with no way to retry.
-  const save = async () => {
+  // Accepts the submit Event so Enter-in-the-input saves without reloading.
+  const save = async (e?: Event) => {
+    e?.preventDefault()
     const trimmed = draft.trim()
     if (!trimmed) return
     setBusy(true)
@@ -103,17 +105,17 @@ function Settings() {
             </div>
           </>
         ) : (
-          <div class="st__row">
+          <form class="st__row" onSubmit={save}>
             <input
               type="password"
               value={draft}
               placeholder="ghp_… or github_pat_…"
               onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
             />
-            <button type="button" onClick={save} disabled={busy || !draft.trim()}>
+            <button type="submit" disabled={busy || !draft.trim()}>
               Save
             </button>
-          </div>
+          </form>
         )}
 
         <div class="st__guidance">
