@@ -19,15 +19,16 @@ Phase 1 client-only PoC of an MV3 browser extension that shows explainable trust
 **Phase 2 dimensions:**
 - **Slice 1 — Release discipline** (4th dimension, **additive**, scored from `GET /releases`) shipped in **PR #10**.
 - **Slice 2 — Governance** (5th dimension, **core**, scored from `GET /contributors`: distributed maintenance → strong, bus-factor-1 → weak; emits no flags, so a solo utility is never flagged caution).
+- **Slice 3 — Responsiveness** (6th dimension, **additive**, scored from recent closed `/issues` + `/pulls` activity; lifts toward strong for actively-triaged repos, never demotes).
 
-The engine now scores **5 of 7** dimensions; the suite is **74 tests** (up from 49).
+The engine now scores **6 of 7** dimensions; the suite is **84 tests** (up from 49).
 
 ### What's left / next
 
 1. **Watchlist page polish** — the one surface that didn't get the shared-component visual language; still the plain skeleton table.
 2. **Finish in-browser dogfood QA** — card + popup verified; not yet eyeballed: watchlist save/refresh/remove, SPA repo→repo nav, and the rate-limit/error/private/loading states.
 3. **Deferred review item** — engine should emit structured rationale segments (explicit link slots) instead of `DimensionRow` string-matching link labels against rationale prose.
-4. **Phase 2** — see the backlog (2 deferred dimensions (Supply chain, Responsiveness), settings, share, cloud enrichment, Chrome Web Store packaging).
+4. **Phase 2** — see the backlog (1 deferred dimension (Supply chain), settings, share, cloud enrichment, Chrome Web Store packaging).
 
 ## How issues were worked
 

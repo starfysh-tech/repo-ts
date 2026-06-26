@@ -2,6 +2,8 @@ import { analyzeRepo } from '../engine/analyzeRepo'
 import {
   fetchCommunityProfileLive,
   fetchContributorsLive,
+  fetchIssuesLive,
+  fetchPullsLive,
   fetchReleasesLive,
   fetchRepoLive,
 } from '../engine/githubClient'
@@ -28,6 +30,8 @@ async function handleAnalyze(target: SupportedRepo, refresh: boolean): Promise<A
       fetchCommunityProfile: fetchCommunityProfileLive,
       fetchReleases: fetchReleasesLive,
       fetchContributors: fetchContributorsLive,
+      fetchIssues: fetchIssuesLive,
+      fetchPulls: fetchPullsLive,
       now,
     },
     target,
