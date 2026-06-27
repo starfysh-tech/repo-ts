@@ -6,7 +6,7 @@ import { defineManifest } from '@crxjs/vite-plugin'
 export default defineManifest({
   manifest_version: 3,
   name: 'Repo Trust',
-  version: '0.2.5',
+  version: '0.2.6',
   description: 'Explainable trust signals on public GitHub repository pages.',
   // `activeTab` lets the popup read the current tab's URL (granted on the user's
   // action click); narrower than `tabs`, which would expose every tab.

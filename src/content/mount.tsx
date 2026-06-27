@@ -4,6 +4,7 @@ import { confidenceMeterStyles } from '../shared/ConfidenceMeter'
 import { dimensionRowStyles } from '../shared/DimensionRow'
 import { trustDetailsStyles } from '../shared/TrustDetails'
 import { scopeNoteStyles } from '../shared/ScopeNote'
+import { caveatsStyles } from '../shared/Caveats'
 import { headlineStyles } from '../shared/Headline'
 
 const HOST_ID = 'repo-trust-root'
@@ -52,6 +53,7 @@ const STYLES = `
   ${dimensionRowStyles}
   ${trustDetailsStyles}
   ${scopeNoteStyles}
+  ${caveatsStyles}
 `
 
 // Single mounted host for the in-page UI. Tracking the host and its Preact
