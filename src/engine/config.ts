@@ -1,7 +1,7 @@
 // Tunable scoring constants — the single place dimension thresholds live,
 // finalized against the committed per-archetype fixtures (`__fixtures__/`).
 
-export const SCORE_VERSION = '0.4.0'
+export const SCORE_VERSION = '0.5.0'
 
 /** A repo younger than this reads as "very new" (a low-evidence signal). */
 export const VERY_NEW_DAYS = 30
