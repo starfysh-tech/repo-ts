@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { analyzeRepo } from './analyzeRepo'
-import { DEFAULT_SCORING_CONFIG, type ScoringConfig } from './config'
+import { DEFAULT_SCORING_CONFIG, SCORING_PRESETS, type ScoringConfig } from './config'
 import type {
   AnalysisOutcome,
   CommunityFetchResult,
@@ -292,6 +292,67 @@ describe('analyzeRepo — full three-dimension engine', () => {
     const result = expectOk(await analyze(a))
     expect(result.flags).toContainEqual(expect.objectContaining({ key: 'license-missing', severity: 'medium' }))
     expect(result.trust_state).not.toBe('caution')
+  })
+})
+
+describe('scoring presets', () => {
+  // Guardrail under EVERY preset: is-number (a quiet, finished, licensed utility)
+  // must never be caution and never carry a high-severity flag, regardless of how
+  // the preset tunes guard sensitivity / thresholds.
+  for (const preset of ['balanced', 'cautious', 'minimal'] as const) {
+    it(`${preset}: is-number is never caution and carries no high-severity flag`, async () => {
+      const outcome = await analyzeRepo(
+        {
+          fetchRepo: async () => ({ ok: true, repo: isNumberRepo as GithubRepo }),
+          fetchCommunityProfile: async () => ({ ok: true, profile: isNumberCp as CommunityProfileRaw }),
+          fetchReleases: async () => ({ ok: true, releases: isNumberRel as GithubRelease[] }),
+          fetchContributors: async () => ({ ok: true, contributors: isNumberCon as GithubContributor[] }),
+          fetchIssues: async () => ({ ok: true, issues: isNumberIss as GithubIssue[] }),
+          fetchPulls: async () => ({ ok: true, pulls: isNumberPr as GithubPull[] }),
+          now: NOW,
+          config: SCORING_PRESETS[preset],
+        },
+        target('jonschlinkert', 'is-number'),
+      )
+      const result = expectOk(outcome)
+      expect(result.trust_state).not.toBe('caution')
+      expect(result.flags.every((f) => f.severity !== 'high')).toBe(true)
+    })
+  }
+
+  const analyzePonytailWith = (config: ScoringConfig) =>
+    analyzeRepo(
+      {
+        fetchRepo: async () => ({ ok: true, repo: ponytailRepo as GithubRepo }),
+        fetchCommunityProfile: async () => ({ ok: true, profile: ponytailCp as CommunityProfileRaw }),
+        fetchReleases: async () => ({ ok: true, releases: ponytailRel as GithubRelease[] }),
+        fetchContributors: async () => ({ ok: true, contributors: ponytailCon as GithubContributor[] }),
+        fetchIssues: async () => ({ ok: true, issues: ponytailIss as GithubIssue[] }),
+        fetchPulls: async () => ({ ok: true, pulls: ponytailPr as GithubPull[] }),
+        now: NOW,
+        config,
+      },
+      target('DietrichGebert', 'ponytail'),
+    )
+
+  const hasManufacturedCredibility = (result: ReturnType<typeof expectOk>) =>
+    result.flags.some((f) => f.key === 'manufactured-credibility')
+
+  it('balanced keeps the manufactured-credibility caveat (still capped at mixed)', async () => {
+    const result = expectOk(await analyzePonytailWith(SCORING_PRESETS.balanced))
+    expect(hasManufacturedCredibility(result)).toBe(true)
+    expect(result.trust_state).toBe('mixed_signals')
+  })
+
+  it('minimal drops the manufactured-credibility caveat (guard off, still capped at mixed)', async () => {
+    const result = expectOk(await analyzePonytailWith(SCORING_PRESETS.minimal))
+    expect(hasManufacturedCredibility(result)).toBe(false)
+    expect(result.trust_state).toBe('mixed_signals')
+  })
+
+  it('cautious keeps the manufactured-credibility caveat (any-2-of-3 fires on an all-3 repo)', async () => {
+    const result = expectOk(await analyzePonytailWith(SCORING_PRESETS.cautious))
+    expect(hasManufacturedCredibility(result)).toBe(true)
   })
 })
 

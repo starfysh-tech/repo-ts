@@ -66,6 +66,17 @@ export interface ScoringConfig {
   additiveDimensions: DimensionKey[]
 }
 
+/** The six dimension keys as a runtime list (the type is compile-time only).
+ *  Used to validate a user-supplied `additiveDimensions` override. */
+export const DIMENSION_KEYS: DimensionKey[] = [
+  'provenance',
+  'security',
+  'transparency',
+  'release',
+  'governance',
+  'responsiveness',
+]
+
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   veryNewDays: 30,
   dormantDays: 730,
@@ -79,6 +90,45 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   provenanceGate: true,
   manufacturedGuard: { sensitivity: 'all-3', severity: 'medium' },
   additiveDimensions: ['release', 'responsiveness'],
+}
+
+/** The named, audience-friendly stances. `balanced` is the default behavior;
+ *  `cautious` raises the bars to read STRONG (so more repos read mixed at the
+ *  margins); `minimal` is a lighter-touch read for casual browsing. */
+export type ScoringPreset = 'balanced' | 'cautious' | 'minimal'
+
+/**
+ * Preset → full `ScoringConfig`. These are the proposed baselines, validated
+ * against the committed fixtures (the `is-number`-never-`caution` guardrail holds
+ * under every preset — none touches the archived flag or sets guard severity to
+ * `caution`, the only two caution triggers). A user's advanced overrides (slice C)
+ * merge on top of the chosen preset.
+ *
+ * - `cautious`: harder to be "established" and "distributed", a stricter triage
+ *   bar, and the manufactured-credibility guard fires on any 2-of-3 maturity
+ *   signals (not all 3) — all raise the bar to STRONG without ever loosening it.
+ * - `minimal`: turns the manufactured-credibility caveat off (fewer caveats for
+ *   casual browsing). It does NOT disable the provenance gate or the archived
+ *   caution — "lighter" never means "less protected against the high-severity
+ *   signals".
+ */
+/** The presets as an ordered runtime list (the type is compile-time only), for
+ *  rendering the selector and asserting each preset stays within bounds. */
+export const SCORING_PRESET_KEYS: ScoringPreset[] = ['balanced', 'cautious', 'minimal']
+
+export const SCORING_PRESETS: Record<ScoringPreset, ScoringConfig> = {
+  balanced: DEFAULT_SCORING_CONFIG,
+  cautious: {
+    ...DEFAULT_SCORING_CONFIG,
+    establishedDays: 730,
+    govDistributedMin: 8,
+    responsiveActiveMin: 8,
+    manufacturedGuard: { sensitivity: 'any-2-of-3', severity: 'medium' },
+  },
+  minimal: {
+    ...DEFAULT_SCORING_CONFIG,
+    manufacturedGuard: { sensitivity: 'off', severity: 'medium' },
+  },
 }
 
 /** Maps the guard's policy severity to a `Flag` severity. `caution` → `high`,
