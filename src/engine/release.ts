@@ -28,7 +28,7 @@ export function scoreRelease(
         confidence_state: 'low',
         triggered_signals: [],
         evidence_links: [],
-        rationale_summary: 'No published releases found.',
+        rationale_segments: [{ text: 'No published releases found.' }],
       },
       hasEvidence: false,
       flags: [],
@@ -49,6 +49,7 @@ export function scoreRelease(
   const state: DimensionState = recent && cadence ? 'strong' : 'mixed'
 
   const positives: PositiveSignal[] = [{ key: 'releases', label: 'Published releases' }]
+  const releasesUrl = `https://github.com/${target.owner}/${target.repo}/releases`
 
   return {
     dimension: {
@@ -56,15 +57,21 @@ export function scoreRelease(
       dimension_state: state,
       confidence_state: 'high',
       triggered_signals: ['releases', recent ? 'recent-release' : 'stale-release'],
-      evidence_links: [
-        { label: 'Releases', url: `https://github.com/${target.owner}/${target.repo}/releases` },
-      ],
-      rationale_summary:
+      evidence_links: [{ label: 'Releases', url: releasesUrl }],
+      rationale_segments:
         recent && cadence
-          ? 'Regular published releases; the latest is recent.'
+          ? [
+              { text: 'Regular published ' },
+              { text: 'releases', href: releasesUrl },
+              { text: '; the latest is recent.' },
+            ]
           : recent
-            ? 'Has a recent release.'
-            : 'Has published releases, but the latest is old.',
+            ? [{ text: 'Has a recent ' }, { text: 'release', href: releasesUrl }, { text: '.' }]
+            : [
+                { text: 'Has published ' },
+                { text: 'releases', href: releasesUrl },
+                { text: ', but the latest is old.' },
+              ],
     },
     hasEvidence: true,
     flags: [],

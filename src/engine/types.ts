@@ -61,6 +61,15 @@ export interface EvidenceLink {
   url: string
 }
 
+/** A piece of a dimension's rationale prose. A bare `{ text }` renders as text;
+ *  `{ text, href }` renders that span as an inline evidence link. The engine
+ *  decides link placement explicitly (the scorer that knows the URL emits the
+ *  slot), so the UI never has to string-match a label against the prose. */
+export interface RationaleSegment {
+  text: string
+  href?: string
+}
+
 export interface Flag {
   key: string
   severity: Severity
@@ -78,7 +87,7 @@ export interface DimensionResult {
   confidence_state: ConfidenceState
   triggered_signals: string[]
   evidence_links: EvidenceLink[]
-  rationale_summary: string
+  rationale_segments: RationaleSegment[]
 }
 
 export interface AnalysisResult {

@@ -1,5 +1,12 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
-import type { DimensionContribution, DimensionState, Flag, GithubRepo, PositiveSignal } from './types'
+import type {
+  DimensionContribution,
+  DimensionState,
+  Flag,
+  GithubRepo,
+  PositiveSignal,
+  RationaleSegment,
+} from './types'
 import { DEFAULT_SCORING_CONFIG, type ScoringConfig } from './config'
 import { daysBetween } from './time'
 
@@ -63,7 +70,7 @@ export function scoreProvenance(
         { label: 'Repository', url: `https://github.com/${target.owner}/${target.repo}` },
         { label: `@${repo.owner.login}`, url: `https://github.com/${repo.owner.login}` },
       ],
-      rationale_summary: rationale({ hasLicense, isOrg, established, dormant, archived: repo.archived, veryNew }),
+      rationale_segments: rationale({ hasLicense, isOrg, established, dormant, archived: repo.archived, veryNew }),
     },
     // Affirmative provenance facts: a license, an org owner, or an established
     // history. A brand-new unlicensed personal repo offers none → low confidence.
@@ -89,6 +96,8 @@ function provenanceState(p: {
   return 'mixed'
 }
 
+// Provenance's evidence links (the repo and the owner) are never named in the
+// prose, so the rationale is a single text segment; the links render as chips.
 function rationale(p: {
   hasLicense: boolean
   isOrg: boolean
@@ -96,15 +105,15 @@ function rationale(p: {
   dormant: boolean
   archived: boolean
   veryNew: boolean
-}): string {
-  if (p.archived) return 'Archived by its owner (read-only).'
+}): RationaleSegment[] {
+  if (p.archived) return [{ text: 'Archived by its owner (read-only).' }]
   const parts: string[] = []
   parts.push(p.hasLicense ? 'Licensed' : 'no license detected')
   parts.push(p.isOrg ? 'organization-owned' : 'personal-account-owned')
   if (p.veryNew) parts.push('newly created')
   else if (p.established) parts.push('with an established history')
   if (p.dormant) parts.push('quiet recently')
-  return capitalize(parts.join(', ')) + '.'
+  return [{ text: capitalize(parts.join(', ')) + '.' }]
 }
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)

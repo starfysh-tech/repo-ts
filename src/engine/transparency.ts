@@ -25,10 +25,11 @@ export function scoreTransparency(
   const hasContributing = files.contributing
   const hasDescription = (repo.description ?? '').trim().length > 0
 
+  const readmeUrl = `https://github.com/${target.owner}/${target.repo}#readme`
   if (hasReadme) {
     positives.push({ key: 'readme', label: 'README' })
     triggered.push('readme')
-    evidenceLinks.push({ label: 'README', url: `https://github.com/${target.owner}/${target.repo}#readme` })
+    evidenceLinks.push({ label: 'README', url: readmeUrl })
   }
   if (hasContributing) {
     positives.push({ key: 'contributing', label: 'Contributing guide' })
@@ -54,11 +55,15 @@ export function scoreTransparency(
       confidence_state: hasEvidence ? 'high' : 'low',
       triggered_signals: triggered,
       evidence_links: evidenceLinks,
-      rationale_summary: hasReadme
+      rationale_segments: hasReadme
         ? hasContributing
-          ? 'Documented with a README and contributing guide.'
-          : 'Has a README.'
-        : 'Little public documentation found.',
+          ? [
+              { text: 'Documented with a ' },
+              { text: 'README', href: readmeUrl },
+              { text: ' and contributing guide.' },
+            ]
+          : [{ text: 'Has a ' }, { text: 'README', href: readmeUrl }, { text: '.' }]
+        : [{ text: 'Little public documentation found.' }],
     },
     hasEvidence,
     flags: [],

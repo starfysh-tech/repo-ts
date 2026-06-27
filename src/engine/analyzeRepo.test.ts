@@ -149,7 +149,7 @@ const dimState = (outcome: AnalysisOutcome, key: DimensionKey): DimensionState =
 describe('analyzeRepo — full three-dimension engine', () => {
   it('stamps every analysis with the score version and the injected time', async () => {
     const result = expectOk(await analyze(ARCHETYPES[0]))
-    expect(result.score_version).toBe('0.6.0')
+    expect(result.score_version).toBe('0.7.0')
     expect(result.analyzed_at).toBe(NOW.toISOString())
     expect(result.dimension_results.map((d) => d.dimension_key)).toEqual(['provenance', 'security', 'transparency', 'release', 'governance', 'responsiveness'])
   })

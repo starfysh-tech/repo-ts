@@ -18,7 +18,7 @@ const repoAged = (ageDays: number): GithubRepo => {
 const dim = (key: DimensionKey, state: DimensionState): DimensionContribution => ({
   dimension: {
     dimension_key: key, dimension_state: state, confidence_state: 'high',
-    triggered_signals: [], evidence_links: [], rationale_summary: '',
+    triggered_signals: [], evidence_links: [], rationale_segments: [],
   },
   hasEvidence: true, flags: [], positives: [],
 })

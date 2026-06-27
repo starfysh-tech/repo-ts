@@ -25,7 +25,7 @@ export function scoreGovernance(
         confidence_state: 'low',
         triggered_signals: [],
         evidence_links: [],
-        rationale_summary: 'Not enough contributor data.',
+        rationale_segments: [{ text: 'Not enough contributor data.' }],
       },
       hasEvidence: false,
       flags: [],
@@ -45,6 +45,7 @@ export function scoreGovernance(
   const positives: PositiveSignal[] = distributed
     ? [{ key: 'multiple-maintainers', label: 'Multiple active maintainers' }]
     : []
+  const contributorsUrl = `https://github.com/${target.owner}/${target.repo}/graphs/contributors`
 
   return {
     dimension: {
@@ -52,17 +53,24 @@ export function scoreGovernance(
       dimension_state: state,
       confidence_state: 'high',
       triggered_signals: ['contributors', state],
-      evidence_links: [
-        {
-          label: 'Contributors',
-          url: `https://github.com/${target.owner}/${target.repo}/graphs/contributors`,
-        },
-      ],
-      rationale_summary: distributed
-        ? 'Maintained by multiple contributors.'
+      evidence_links: [{ label: 'Contributors', url: contributorsUrl }],
+      rationale_segments: distributed
+        ? [
+            { text: 'Maintained by multiple ' },
+            { text: 'contributors', href: contributorsUrl },
+            { text: '.' },
+          ]
         : dominated
-          ? 'Maintenance is concentrated in one contributor.'
-          : 'A small group of contributors.',
+          ? [
+              { text: 'Maintenance is concentrated in one ' },
+              { text: 'contributor', href: contributorsUrl },
+              { text: '.' },
+            ]
+          : [
+              { text: 'A small group of ' },
+              { text: 'contributors', href: contributorsUrl },
+              { text: '.' },
+            ],
     },
     hasEvidence: true,
     flags: [],
