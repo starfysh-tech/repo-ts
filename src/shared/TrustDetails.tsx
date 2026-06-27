@@ -27,9 +27,9 @@ export const trustDetailsStyles = `
 // never misled into reading the verdict as comprehensive. Supply chain (malware,
 // known vulnerabilities, dependency risk) is the most security-relevant gap for a
 // pre-install decision, so it carries an explicit "check separately" note.
-const DEFERRED_DIMENSIONS: { name: string; note: string }[] = [
+const DEFERRED_DIMENSIONS = [
   { name: 'Supply chain', note: 'malware, known vulnerabilities, and dependency risk are not checked here — assess these separately before installing.' },
-]
+] as const
 
 // Collapsible "Trust details": the per-dimension breakdown + the deferred
 // dimensions, behind a toggle. Shared by the in-page card and the popup. Default
