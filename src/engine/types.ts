@@ -172,7 +172,8 @@ export interface DimensionContribution {
    *  (a sparse repo reads low-confidence, not bad). */
   hasEvidence: boolean
   /** Additive dimension: it can lift the top-level verdict toward strong but must
-   *  never demote it — excluded from the trust-majority denominator. (Release.) */
+   *  never demote it — excluded from the trust-majority denominator. Assigned by
+   *  `analyzeRepo` from `config.additiveDimensions` (policy), not by the scorers. */
   additive?: boolean
   flags: Flag[]
   positives: PositiveSignal[]

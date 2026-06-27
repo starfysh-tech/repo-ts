@@ -31,7 +31,6 @@ export function scoreRelease(
         rationale_summary: 'No published releases found.',
       },
       hasEvidence: false,
-      additive: true,
       flags: [],
       positives: [],
     }
@@ -68,7 +67,6 @@ export function scoreRelease(
             : 'Has published releases, but the latest is old.',
     },
     hasEvidence: true,
-    additive: true,
     flags: [],
     positives,
   }

@@ -39,7 +39,6 @@ export function scoreResponsiveness(
         rationale_summary: 'No recent issue or pull-request activity.',
       },
       hasEvidence: false,
-      additive: true,
       flags: [],
       positives: [],
     }
@@ -67,7 +66,6 @@ export function scoreResponsiveness(
           : 'Some recent issue or pull-request activity.',
     },
     hasEvidence: true,
-    additive: true,
     flags: [],
     positives: state === 'strong' ? [{ key: 'active-triage', label: 'Actively triaged' }] : [],
   }

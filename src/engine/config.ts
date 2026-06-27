@@ -96,7 +96,11 @@ export const GUARD_FLAG_SEVERITY: Record<GuardSeverity, 'high' | 'medium' | 'low
  * configs always hash equal regardless of key order. FNV-1a 32-bit → base36.
  */
 export function hashConfig(config: ScoringConfig): string {
-  const json = canonicalize(config)
+  // `additiveDimensions` is semantically a Set (order-irrelevant in `analyzeRepo`),
+  // so normalize it before hashing — otherwise a reorder (e.g. a slice-B preset
+  // merge) would hash differently and needlessly partition the cache.
+  const normalized = { ...config, additiveDimensions: [...config.additiveDimensions].sort() }
+  const json = canonicalize(normalized)
   let h = 0x811c9dc5
   for (let i = 0; i < json.length; i++) {
     h ^= json.charCodeAt(i)

@@ -26,14 +26,12 @@ describe('scoreRelease', () => {
     const c = score([])
     expect(c.dimension.dimension_state).toBe('unknown')
     expect(c.hasEvidence).toBe(false)
-    expect(c.additive).toBe(true)
     expect(c.dimension.evidence_links).toEqual([])
   })
 
-  it('is additive and emits no flags in every branch (never drives caution)', () => {
+  it('emits no flags in every branch (never drives caution)', () => {
     expect(score([]).flags).toEqual([])
     expect(score([rel()]).flags).toEqual([])
-    expect(score([rel()]).additive).toBe(true)
   })
 
   it('reads strong for recent releases with cadence (>= 2 stable)', () => {

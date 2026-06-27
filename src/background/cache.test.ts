@@ -41,6 +41,17 @@ describe('cache helpers', () => {
     expect(hashConfig(reordered)).toBe(hashConfig(DEFAULT_SCORING_CONFIG))
   })
 
+  it('treats additiveDimensions as a set: element order does not change the hash', () => {
+    // analyzeRepo consumes additiveDimensions via a Set, so ['release','responsiveness']
+    // and its reverse are equivalent — a preset merge that reorders them must not
+    // partition the cache.
+    const reversed = {
+      ...DEFAULT_SCORING_CONFIG,
+      additiveDimensions: [...DEFAULT_SCORING_CONFIG.additiveDimensions].reverse(),
+    }
+    expect(hashConfig(reversed)).toBe(hashConfig(DEFAULT_SCORING_CONFIG))
+  })
+
   it('treats a result within 24h as fresh', () => {
     const now = new Date('2026-06-24T12:00:00Z')
     expect(isFresh(resultAt('2026-06-24T06:00:00Z'), now)).toBe(true) // 6h old

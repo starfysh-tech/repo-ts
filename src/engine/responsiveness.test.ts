@@ -19,12 +19,11 @@ const iss = (closed_at: string | null, isPr = false): GithubIssue => ({
 })
 const pr = (closed_at: string | null): GithubPull => ({ closed_at, merged_at: closed_at })
 
-describe('scoreResponsiveness — additive recent-close signal', () => {
-  it('reads no issues and no pulls as unknown (no evidence), additive', () => {
+describe('scoreResponsiveness — recent-close signal', () => {
+  it('reads no issues and no pulls as unknown (no evidence)', () => {
     const c = scoreResponsiveness([], [], target, now)
     expect(c.dimension.dimension_state).toBe('unknown')
     expect(c.hasEvidence).toBe(false)
-    expect(c.additive).toBe(true)
     expect(c.flags).toEqual([])
   })
 
