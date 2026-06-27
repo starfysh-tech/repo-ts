@@ -36,7 +36,9 @@ Changing any value re-scores future analyses (the active config flows into the e
 
 ## Implementation Decisions
 
-### Slice A — Config seam (prerequisite, no behavior change)
+### Slice A — Config seam (prerequisite, no behavior change) — ✅ DONE
+> Landed: `ScoringConfig` + `DEFAULT_SCORING_CONFIG` + `hashConfig` in `src/engine/config.ts`; threaded through all six scorers, the provenance gate, the manufactured-credibility guard (sensitivity/severity now config-driven), and confidence breadth; cache key carries the config hash. `additiveDimensions` is a policy knob applied in `analyzeRepo`. `CACHE_TTL_MS` deferred (consumed outside the engine — lands with the UI). 118 tests; every fixture verdict unchanged. `SCORE_VERSION` stays `0.6.0` (no shape/logic change); no manifest bump (no user-facing change yet).
+
 - Introduce a `ScoringConfig` type (a record of every value currently in `src/engine/config.ts` plus the policy decisions below). The existing constants become the `DEFAULT_SCORING_CONFIG`.
 - Thread a `config: ScoringConfig` through `analyzeRepo` (add to `AnalyzeDeps`, defaulting to `DEFAULT_SCORING_CONFIG`) and down into every scorer (`provenance`, `security`, `transparency`, `release`, `governance`, `responsiveness`), the gate in `deriveTrustState`, and the manufactured-credibility guard. Scorers stop importing constants and read `config.*`.
 - The cache key incorporates a **stable hash of the active config** (alongside `SCORE_VERSION` + owner/repo), so distinct configs don't collide and a config change invalidates prior entries. (`SCORE_VERSION` still bumps when the *shape*/logic changes; the config hash handles *value* changes.)

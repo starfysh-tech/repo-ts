@@ -1,6 +1,6 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
 import type { DimensionContribution, DimensionState, GithubContributor, PositiveSignal } from './types'
-import { GOV_DISTRIBUTED_MIN, GOV_DOMINANT_SHARE } from './config'
+import { DEFAULT_SCORING_CONFIG, type ScoringConfig } from './config'
 
 /**
  * Governance: is maintenance distributed across several people, or concentrated
@@ -12,6 +12,7 @@ import { GOV_DISTRIBUTED_MIN, GOV_DOMINANT_SHARE } from './config'
 export function scoreGovernance(
   contributors: GithubContributor[],
   target: SupportedRepo,
+  config: ScoringConfig = DEFAULT_SCORING_CONFIG,
 ): DimensionContribution {
   // Humans only: bot/anonymous accounts aren't maintenance evidence.
   const users = contributors.filter((c) => c.type === 'User')
@@ -37,8 +38,8 @@ export function scoreGovernance(
   const total = users.reduce((s, u) => s + (u.contributions || 0), 0)
   const maxContributions = users.reduce((max, u) => Math.max(max, u.contributions || 0), 0)
   const topShare = total > 0 ? maxContributions / total : 1
-  const distributed = users.length >= GOV_DISTRIBUTED_MIN && topShare < GOV_DOMINANT_SHARE
-  const dominated = topShare >= GOV_DOMINANT_SHARE
+  const distributed = users.length >= config.govDistributedMin && topShare < config.govDominantShare
+  const dominated = topShare >= config.govDominantShare
   const state: DimensionState = distributed ? 'strong' : dominated ? 'weak' : 'mixed'
 
   const positives: PositiveSignal[] = distributed

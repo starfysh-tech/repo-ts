@@ -1,6 +1,6 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
 import type { DimensionContribution, DimensionState, Flag, GithubRepo, PositiveSignal } from './types'
-import { DORMANT_DAYS, ESTABLISHED_DAYS, VERY_NEW_DAYS } from './config'
+import { DEFAULT_SCORING_CONFIG, type ScoringConfig } from './config'
 import { daysBetween } from './time'
 
 /**
@@ -17,6 +17,7 @@ export function scoreProvenance(
   repo: GithubRepo,
   target: SupportedRepo,
   now: Date,
+  config: ScoringConfig = DEFAULT_SCORING_CONFIG,
 ): DimensionContribution {
   const flags: Flag[] = []
   const positives: PositiveSignal[] = []
@@ -27,9 +28,9 @@ export function scoreProvenance(
   const isOrg = repo.owner.type === 'Organization'
   const ageDays = daysBetween(now, repo.created_at)
   const idleDays = daysBetween(now, repo.pushed_at)
-  const veryNew = ageDays < VERY_NEW_DAYS
-  const established = ageDays > ESTABLISHED_DAYS
-  const dormant = idleDays > DORMANT_DAYS && !repo.archived
+  const veryNew = ageDays < config.veryNewDays
+  const established = ageDays > config.establishedDays
+  const dormant = idleDays > config.dormantDays && !repo.archived
 
   if (repo.archived) {
     flags.push({ key: 'archived', severity: 'high', label: 'Repository is archived' })

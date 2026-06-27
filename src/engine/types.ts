@@ -1,4 +1,5 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
+import type { ScoringConfig } from './config'
 
 // ── GitHub data (the subset of `GET /repos/{owner}/{repo}` we read) ──────────
 export interface GithubRepo {
@@ -148,6 +149,9 @@ export interface AnalyzeDeps {
   fetchPulls: (target: SupportedRepo) => Promise<PullsFetchResult>
   /** Injected reference time so age/dormancy and `analyzed_at` are deterministic in tests. */
   now: Date
+  /** Active scoring configuration. Omitted → `DEFAULT_SCORING_CONFIG` (the original
+   *  hardcoded behavior), so existing callers/tests need no change. */
+  config?: ScoringConfig
 }
 
 /**

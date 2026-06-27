@@ -11,7 +11,7 @@ import type {
   RepoFetchResult,
   TrustState,
 } from './types'
-import { HIGH_CONFIDENCE_THRESHOLD, SCORE_VERSION } from './config'
+import { DEFAULT_SCORING_CONFIG, SCORE_VERSION, type ScoringConfig } from './config'
 import { detectManufacturedCredibility } from './manufacturedCredibility'
 import { scoreGovernance } from './governance'
 import { scoreProvenance } from './provenance'
@@ -28,6 +28,8 @@ import { scoreTransparency } from './transparency'
  * as a trust judgement.
  */
 export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Promise<AnalysisOutcome> {
+  const config = deps.config ?? DEFAULT_SCORING_CONFIG
+
   const repoRes = await deps.fetchRepo(target)
   if (!repoRes.ok) return errorOutcome(repoRes)
 
@@ -64,26 +66,32 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
   const issues = issuesRes.ok ? issuesRes.issues : []
   const pulls = pullsRes.ok ? pullsRes.pulls : []
 
+  // Each scorer's `additive` self-declaration is overridden by policy: the active
+  // config decides which dimensions lift-but-never-demote (excluded from the
+  // trust-majority denominator). At the default config this matches the scorers
+  // (release + responsiveness), so behavior is unchanged.
+  const additiveSet = new Set(config.additiveDimensions)
   const contributions: DimensionContribution[] = [
-    scoreProvenance(repoRes.repo, target, deps.now),
+    scoreProvenance(repoRes.repo, target, deps.now, config),
     scoreSecurity(files, target),
     scoreTransparency(files, repoRes.repo, target),
-    scoreRelease(releases, target, deps.now),
-    scoreGovernance(contributors, target),
-    scoreResponsiveness(issues, pulls, target, deps.now),
-  ]
+    scoreRelease(releases, target, deps.now, config),
+    scoreGovernance(contributors, target, config),
+    scoreResponsiveness(issues, pulls, target, deps.now, config),
+  ].map((c) => ({ ...c, additive: additiveSet.has(c.dimension.dimension_key) }))
 
   const flags: Flag[] = contributions.flatMap((c) => c.flags)
   // Cross-dimension caveat: a very-new repo already showing every maturity signal
   // (release + governance + responsiveness all strong) is a manufactured-trust tell.
-  // Sub-caution (medium) — surfaced as a caveat, never escalated to `caution`.
-  const manufactured = detectManufacturedCredibility(contributions, repoRes.repo, deps.now)
+  // Sub-caution (medium) by default — surfaced as a caveat, never escalated to
+  // `caution` unless the user raises the guard's severity policy.
+  const manufactured = detectManufacturedCredibility(contributions, repoRes.repo, deps.now, config)
   if (manufactured) flags.push(manufactured)
 
   const positives = contributions.flatMap((c) => c.positives)
   const evidenced = contributions.filter((c) => c.hasEvidence)
-  const confidence = deriveConfidence(evidenced.length)
-  const trustState = deriveTrustState(evidenced, flags, confidence)
+  const confidence = deriveConfidence(evidenced.length, config.highConfidenceThreshold)
+  const trustState = deriveTrustState(evidenced, flags, confidence, config)
 
   const result: AnalysisResult = {
     trust_state: trustState,
@@ -129,12 +137,12 @@ function errorOutcome(fetched: Extract<RepoFetchResult, { ok: false }>): Analysi
   }
 }
 
-/** Confidence = breadth of evidence across the four dimensions: ≥3 of 4
- *  evidenced → high, 2 → medium, ≤1 → low. A sparse repo reads low-confidence
- *  (limited evidence), not low-trust. */
-function deriveConfidence(evidencedCount: number): ConfidenceState {
-  if (evidencedCount >= HIGH_CONFIDENCE_THRESHOLD) return 'high'
-  if (evidencedCount >= HIGH_CONFIDENCE_THRESHOLD - 1) return 'medium'
+/** Confidence = breadth of evidence across the four dimensions: ≥threshold
+ *  evidenced → high, one fewer → medium, ≤1 → low. A sparse repo reads
+ *  low-confidence (limited evidence), not low-trust. */
+function deriveConfidence(evidencedCount: number, highThreshold: number): ConfidenceState {
+  if (evidencedCount >= highThreshold) return 'high'
+  if (evidencedCount >= highThreshold - 1) return 'medium'
   return 'low'
 }
 
@@ -157,6 +165,7 @@ function deriveTrustState(
   evidenced: DimensionContribution[],
   flags: Flag[],
   confidence: ConfidenceState,
+  config: ScoringConfig,
 ): TrustState {
   if (flags.some((f) => f.severity === 'high')) return 'caution'
   if (confidence === 'low') return 'insufficient_evidence'
@@ -168,15 +177,16 @@ function deriveTrustState(
     cs.filter((c) => c.dimension.dimension_state === 'strong').length
   const strong = strongCount(core) + strongCount(evidenced.filter((c) => c.additive))
 
-  // Provenance gate: STRONG additionally requires provenance itself to be strong
-  // (licensed, established, current, not dormant). A repo can't earn the top verdict
-  // on activity alone when its origin/standing is only caveated — this blocks a
-  // newly-created or otherwise mixed-provenance repo from reading STRONG even with a
-  // strong activity majority. A strong provenance always carries evidence, so it is
-  // present in `evidenced` whenever it qualifies.
-  const provenanceStrong = evidenced.some(
-    (c) => c.dimension.dimension_key === 'provenance' && c.dimension.dimension_state === 'strong',
-  )
+  // Provenance gate (rule 3 above), now a policy toggle: when `provenanceGate` is
+  // off the requirement is waived and a repo can earn STRONG on a strong activity
+  // majority alone — a weakening of the conservative guarantee the user is warned
+  // about. A strong provenance always carries evidence, so it is present in
+  // `evidenced` whenever it qualifies.
+  const provenanceStrong =
+    !config.provenanceGate ||
+    evidenced.some(
+      (c) => c.dimension.dimension_key === 'provenance' && c.dimension.dimension_state === 'strong',
+    )
 
   if (provenanceStrong && strong > core.length / 2 && flags.length === 0) return 'strong_signals'
   return 'mixed_signals'

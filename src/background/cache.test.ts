@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { cacheKey, isFresh } from './cache'
+import { DEFAULT_SCORING_CONFIG, hashConfig } from '../engine/config'
 import type { AnalysisResult } from '../engine/types'
 import type { SupportedRepo } from '../content/parseRepoContext'
 
@@ -7,8 +8,37 @@ const target = (owner: string, repo: string): SupportedRepo => ({ kind: 'repo', 
 const resultAt = (iso: string) => ({ analyzed_at: iso }) as unknown as AnalysisResult
 
 describe('cache helpers', () => {
-  it('keys by owner/repo and score_version', () => {
-    expect(cacheKey(target('facebook', 'react'))).toBe('analysis:facebook/react:0.6.0')
+  it('keys by owner/repo, score_version, and the config hash', () => {
+    const h = hashConfig(DEFAULT_SCORING_CONFIG)
+    expect(cacheKey(target('facebook', 'react'), h)).toBe(`analysis:facebook/react:0.6.0:${h}`)
+  })
+
+  it('partitions the cache by config: different configs yield different keys', () => {
+    const t = target('facebook', 'react')
+    const a = hashConfig(DEFAULT_SCORING_CONFIG)
+    const b = hashConfig({ ...DEFAULT_SCORING_CONFIG, veryNewDays: 9999 })
+    expect(a).not.toBe(b) // value change ⇒ different hash ⇒ stale entries can't be served
+    expect(cacheKey(t, a)).not.toBe(cacheKey(t, b))
+  })
+
+  it('hashes equal configs equally regardless of key order (stable)', () => {
+    // Same values, different object-literal key order → identical hash, so an
+    // equivalent config never needlessly invalidates the cache.
+    const reordered = {
+      additiveDimensions: ['release', 'responsiveness'],
+      provenanceGate: true,
+      manufacturedGuard: { severity: 'medium', sensitivity: 'all-3' },
+      highConfidenceThreshold: 3,
+      responsiveActiveMin: 5,
+      responsiveRecentDays: 90,
+      govDominantShare: 0.85,
+      govDistributedMin: 5,
+      releaseRecentDays: 365,
+      establishedDays: 365,
+      dormantDays: 730,
+      veryNewDays: 30,
+    } as typeof DEFAULT_SCORING_CONFIG
+    expect(hashConfig(reordered)).toBe(hashConfig(DEFAULT_SCORING_CONFIG))
   })
 
   it('treats a result within 24h as fresh', () => {
