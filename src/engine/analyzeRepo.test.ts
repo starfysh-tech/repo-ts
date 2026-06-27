@@ -65,6 +65,16 @@ import commanderPr from './__fixtures__/pulls/commander.json'
 import hexToRgbPr from './__fixtures__/pulls/hex-to-rgb.json'
 import testRepoPr from './__fixtures__/pulls/test-repo.json'
 
+// A synthetic manufactured-credibility archetype: created 14 days before NOW
+// (very-new), licensed personal repo, yet already strong on release + governance +
+// responsiveness. Locks both the provenance gate (capped at mixed) and the guard.
+import ponytailRepo from './__fixtures__/repos/ponytail.json'
+import ponytailCp from './__fixtures__/community/ponytail.json'
+import ponytailRel from './__fixtures__/releases/ponytail.json'
+import ponytailCon from './__fixtures__/contributors/ponytail.json'
+import ponytailIss from './__fixtures__/issues/ponytail.json'
+import ponytailPr from './__fixtures__/pulls/ponytail.json'
+
 // Fixed reference time so age/dormancy and analyzed_at are deterministic.
 const NOW = new Date('2026-06-24T00:00:00Z')
 
@@ -105,6 +115,11 @@ const ARCHETYPES: Archetype[] = [
     trust: 'insufficient_evidence', confidence: 'low', provenance: 'weak', security: 'unknown', transparency: 'mixed', release: 'unknown', governance: 'unknown', responsiveness: 'unknown' },
   { name: 'test-repo', repo: testRepoRepo, community: testRepoCp, releases: testRepoRel, contributors: testRepoCon, issues: testRepoIss, pulls: testRepoPr, target: target('MaxGoodfella', 'test-repo'),
     trust: 'insufficient_evidence', confidence: 'low', provenance: 'weak', security: 'unknown', transparency: 'unknown', release: 'unknown', governance: 'unknown', responsiveness: 'unknown' },
+  // Very-new + all-maturity-strong: provenance is `mixed` (licensed but newly
+  // created), so the gate caps it at mixed_signals despite the strong activity
+  // majority — and the manufactured-credibility guard fires (asserted separately).
+  { name: 'ponytail', repo: ponytailRepo, community: ponytailCp, releases: ponytailRel, contributors: ponytailCon, issues: ponytailIss, pulls: ponytailPr, target: target('DietrichGebert', 'ponytail'),
+    trust: 'mixed_signals', confidence: 'high', provenance: 'mixed', security: 'unknown', transparency: 'strong', release: 'strong', governance: 'strong', responsiveness: 'strong' },
 ]
 
 async function analyze(a: Archetype): Promise<AnalysisOutcome> {
@@ -133,7 +148,7 @@ const dimState = (outcome: AnalysisOutcome, key: DimensionKey): DimensionState =
 describe('analyzeRepo — full three-dimension engine', () => {
   it('stamps every analysis with the score version and the injected time', async () => {
     const result = expectOk(await analyze(ARCHETYPES[0]))
-    expect(result.score_version).toBe('0.5.0')
+    expect(result.score_version).toBe('0.6.0')
     expect(result.analyzed_at).toBe(NOW.toISOString())
     expect(result.dimension_results.map((d) => d.dimension_key)).toEqual(['provenance', 'security', 'transparency', 'release', 'governance', 'responsiveness'])
   })
@@ -221,6 +236,17 @@ describe('analyzeRepo — full three-dimension engine', () => {
     expect(dimState(outcome, 'governance')).toBe('strong')
     expect(result.flags).toEqual([]) // no flag is doing the capping — the gate is
     expect(result.trust_state).toBe('mixed_signals')
+  })
+
+  it('caveats a manufactured-credibility repo (very-new + all maturity strong), never caution', async () => {
+    const a = ARCHETYPES.find((x) => x.name === 'ponytail')!
+    const result = expectOk(await analyze(a))
+    expect(result.flags).toContainEqual(
+      expect.objectContaining({ key: 'manufactured-credibility', severity: 'medium' }),
+    )
+    // The gate caps it at mixed; the guard adds the explanation but never escalates.
+    expect(result.trust_state).toBe('mixed_signals')
+    expect(result.trust_state).not.toBe('caution')
   })
 
   it('does NOT penalize an org-default .github fallback (got keeps its CoC/contributing)', async () => {

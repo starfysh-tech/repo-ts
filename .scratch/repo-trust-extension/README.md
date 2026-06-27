@@ -26,16 +26,16 @@ The engine now scores **6 of 7** dimensions.
 **Post-Phase-2 slices:**
 - **Settings + optional PAT** (PR #13) — an `options_page` storing an optional GitHub token (lifts 60/hr → 5,000/hr), attached only via the service-worker fetch path. **Manifest now versioned** (bump on each user-facing slice; distinct from `SCORE_VERSION`).
 - **Verdict-summary fix** (PR #14) — the one-line takeaway no longer silently drops `mixed` dimensions.
-- **Security framing** (this slice) — a persistent `ScopeNote` on every verdict ("maintenance signals, not a security review" + confirm-the-official-source), the security dimension renamed **"Security docs"** (it only checks doc presence), and a clearer "Not checked here" gap callout for Supply chain. Copy/UI only — the **scoring-policy** half (manufactured-credibility guard, provenance-gated verdict) is deferred to a PRD pass (see `../../docs/future-enhancements.md`).
+- **Security framing** — a persistent `ScopeNote` on every verdict ("maintenance signals, not a security review" + confirm-the-official-source), the security dimension renamed **"Security docs"** (it only checks doc presence), and a clearer "Not checked here" gap callout for Supply chain (copy/UI).
+- **Scoring policy** ([`PRD-scoring-policy.md`](./PRD-scoring-policy.md)) — the deferred half of the security critique, in 3 slices: **(1)** STRONG now requires `provenance` itself to be strong (a newly-created / dormant / unlicensed-but-established repo can't earn the top verdict on activity alone); **(2)** a **manufactured-credibility guard** flags the very-new-yet-already-fully-active pattern (medium caveat, never caution); **(3)** a **`Caveats`** UI channel surfaces all sub-caution flags (the guard *and* the previously-silent "No license detected"). New `ponytail` fixture locks the gate + guard; `SCORE_VERSION` → `0.6.0`.
 
-Suite is **103 tests** (up from 49).
+Suite is **111 tests** (up from 49).
 
 ### What's left / next
 
-1. **Scoring-policy from the security critique** (PRD pass) — manufactured-credibility guard + provenance-gated STRONG. Both re-baseline fixtures, recheck the `is-number` guardrail, and bump `SCORE_VERSION`.
-2. **Finish in-browser dogfood QA** — card + popup + settings verified by eye; not yet: watchlist save/refresh/remove, SPA repo→repo nav, rate-limit/error/private/loading states.
-3. **Deferred review item** — engine should emit structured rationale segments (explicit link slots) instead of `DimensionRow` string-matching link labels against rationale prose.
-4. **Backlog** — 1 deferred dimension (Supply chain), share, cloud enrichment, canonicality/typosquat verification, Chrome Web Store packaging.
+1. **Finish in-browser dogfood QA** — card + popup + settings verified by eye; not yet: the new caveat list on a manufactured-pattern repo, watchlist save/refresh/remove, SPA repo→repo nav, rate-limit/error/private/loading states.
+2. **Deferred review item** — engine should emit structured rationale segments (explicit link slots) instead of `DimensionRow` string-matching link labels against rationale prose.
+3. **Backlog** — 1 deferred dimension (Supply chain), share, cloud enrichment, canonicality/typosquat verification, Chrome Web Store packaging.
 
 ## How issues were worked
 

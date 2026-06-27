@@ -1,0 +1,10 @@
+{
+  "health_percentage": 40,
+  "files": {
+    "readme": { "url": "https://api.github.com/repos/DietrichGebert/ponytail/contents/readme.md" },
+    "license": { "key": "mit", "spdx_id": "MIT" },
+    "code_of_conduct": null,
+    "contributing": null,
+    "security": null
+  }
+}
