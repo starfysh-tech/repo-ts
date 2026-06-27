@@ -135,12 +135,17 @@ function deriveConfidence(evidencedCount: number): ConfidenceState {
  *  dimensions that produced evidence:
  *  1. any high-severity flag (archived) → caution
  *  2. low confidence → insufficient_evidence
- *  3. majority of the evidenced CORE dimensions strong and no negative flags → strong_signals
+ *  3. provenance strong AND majority of the evidenced CORE dimensions strong AND no
+ *     negative flags → strong_signals
  *  4. otherwise → mixed_signals
  *
  *  Release is additive: a strong release counts toward the strong tally, but it
  *  is excluded from the majority denominator, so a stale-release `mixed` can never
- *  dilute and demote an otherwise-strong repo (release lifts, never lowers). */
+ *  dilute and demote an otherwise-strong repo (release lifts, never lowers).
+ *
+ *  Provenance gate (rule 3): the top verdict requires provenance itself to be
+ *  strong, so a repo can't read STRONG on activity alone when its origin/standing
+ *  is only caveated (newly created, dormant, unlicensed-but-established, …). */
 function deriveTrustState(
   evidenced: DimensionContribution[],
   flags: Flag[],
@@ -155,6 +160,17 @@ function deriveTrustState(
   const strongCount = (cs: DimensionContribution[]) =>
     cs.filter((c) => c.dimension.dimension_state === 'strong').length
   const strong = strongCount(core) + strongCount(evidenced.filter((c) => c.additive))
-  if (strong > core.length / 2 && flags.length === 0) return 'strong_signals'
+
+  // Provenance gate: STRONG additionally requires provenance itself to be strong
+  // (licensed, established, current, not dormant). A repo can't earn the top verdict
+  // on activity alone when its origin/standing is only caveated — this blocks a
+  // newly-created or otherwise mixed-provenance repo from reading STRONG even with a
+  // strong activity majority. A strong provenance always carries evidence, so it is
+  // present in `evidenced` whenever it qualifies.
+  const provenanceStrong = evidenced.some(
+    (c) => c.dimension.dimension_key === 'provenance' && c.dimension.dimension_state === 'strong',
+  )
+
+  if (provenanceStrong && strong > core.length / 2 && flags.length === 0) return 'strong_signals'
   return 'mixed_signals'
 }

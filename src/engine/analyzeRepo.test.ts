@@ -133,7 +133,7 @@ const dimState = (outcome: AnalysisOutcome, key: DimensionKey): DimensionState =
 describe('analyzeRepo — full three-dimension engine', () => {
   it('stamps every analysis with the score version and the injected time', async () => {
     const result = expectOk(await analyze(ARCHETYPES[0]))
-    expect(result.score_version).toBe('0.4.0')
+    expect(result.score_version).toBe('0.5.0')
     expect(result.analyzed_at).toBe(NOW.toISOString())
     expect(result.dimension_results.map((d) => d.dimension_key)).toEqual(['provenance', 'security', 'transparency', 'release', 'governance', 'responsiveness'])
   })
@@ -194,6 +194,33 @@ describe('analyzeRepo — full three-dimension engine', () => {
     const result = expectOk(outcome)
     expect(dimState(outcome, 'release')).toBe('mixed')
     expect(result.trust_state).toBe('strong_signals')
+  })
+
+  it('gates STRONG on provenance: a mixed-provenance repo caps at mixed despite a strong-majority', async () => {
+    // React's deps are strong across the board, but force the repo dormant so its
+    // provenance reads `mixed` (licensed + established yet stale). Transparency and
+    // governance stay strong, so a strong CORE majority survives — pre-gate this was
+    // `strong_signals`. The provenance gate must now cap it at `mixed_signals`,
+    // because the top verdict requires provenance itself to be strong.
+    const dormantRepo = { ...reactRepo, pushed_at: '2023-01-01T00:00:00Z' } as GithubRepo
+    const outcome = await analyzeRepo(
+      {
+        fetchRepo: async () => ({ ok: true, repo: dormantRepo }),
+        fetchCommunityProfile: async () => ({ ok: true, profile: reactCp as CommunityProfileRaw }),
+        fetchReleases: async () => ({ ok: true, releases: reactRel as GithubRelease[] }),
+        fetchContributors: async () => ({ ok: true, contributors: reactCon as GithubContributor[] }),
+        fetchIssues: async () => ({ ok: true, issues: reactIss as GithubIssue[] }),
+        fetchPulls: async () => ({ ok: true, pulls: reactPr as GithubPull[] }),
+        now: NOW,
+      },
+      target('facebook', 'react'),
+    )
+    const result = expectOk(outcome)
+    expect(dimState(outcome, 'provenance')).toBe('mixed')
+    expect(dimState(outcome, 'transparency')).toBe('strong')
+    expect(dimState(outcome, 'governance')).toBe('strong')
+    expect(result.flags).toEqual([]) // no flag is doing the capping — the gate is
+    expect(result.trust_state).toBe('mixed_signals')
   })
 
   it('does NOT penalize an org-default .github fallback (got keeps its CoC/contributing)', async () => {

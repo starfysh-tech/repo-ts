@@ -8,7 +8,7 @@ const resultAt = (iso: string) => ({ analyzed_at: iso }) as unknown as AnalysisR
 
 describe('cache helpers', () => {
   it('keys by owner/repo and score_version', () => {
-    expect(cacheKey(target('facebook', 'react'))).toBe('analysis:facebook/react:0.4.0')
+    expect(cacheKey(target('facebook', 'react'))).toBe('analysis:facebook/react:0.5.0')
   })
 
   it('treats a result within 24h as fresh', () => {
