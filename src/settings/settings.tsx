@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks'
 import { mountApp, SURFACE_COLOR, SURFACE_FONT, SURFACE_MUTED } from '../shared/ui'
 import {
   clearPat,
+  clearScoringOverride,
   getSettings,
   resetScoring,
   resolveScoringConfig,
@@ -228,23 +229,40 @@ function ScoringCard() {
     await setScoringOverrides(partial)
     await reload()
   }
+  const clearKnob = async (key: keyof ScoringConfig) => {
+    await clearScoringOverride(key)
+    await reload()
+  }
   const reset = async () => {
     await resetScoring()
     await reload()
   }
 
-  const toggleAdditive = (dim: DimensionKey, on: boolean) => {
-    const next = on
-      ? [...config.additiveDimensions, dim]
-      : config.additiveDimensions.filter((d) => d !== dim)
-    void override({ additiveDimensions: next })
+  // Read-modify-write handlers for set-shaped knobs resolve the LATEST stored
+  // config at click time (not the render-closure `config`), so two quick edits
+  // before a reload completes can't clobber each other.
+  const freshConfig = async () => resolveScoringConfig(await getSettings())
+  const toggleAdditive = async (dim: DimensionKey, on: boolean) => {
+    const current = (await freshConfig()).additiveDimensions
+    const next = on ? [...current, dim] : current.filter((d) => d !== dim)
+    await override({ additiveDimensions: next })
+  }
+  const setGuard = async (patch: Partial<ScoringConfig['manufacturedGuard']>) => {
+    const current = (await freshConfig()).manufacturedGuard
+    await override({ manufacturedGuard: { ...current, ...patch } })
   }
 
   if (!loaded) return null
 
+  // Warnings derive from the option descriptors (the single source of truth for
+  // "which choice weakens conservatism"), so the UI can't drift from the metadata.
   const gateOff = !config.provenanceGate
-  const guardOff = config.manufacturedGuard.sensitivity === 'off'
-  const guardCaution = config.manufacturedGuard.severity === 'caution'
+  const guardOff =
+    GUARD_SENSITIVITY_OPTIONS.find((o) => o.value === config.manufacturedGuard.sensitivity)
+      ?.weakens ?? false
+  const guardCaution =
+    GUARD_SEVERITY_OPTIONS.find((o) => o.value === config.manufacturedGuard.severity)?.emphasis ===
+    'caution'
   const dimsWeaken = additiveWeakens(config.additiveDimensions)
 
   return (
@@ -304,8 +322,18 @@ function ScoringCard() {
                   step={k.step}
                   value={config[k.key]}
                   onChange={(e) => {
-                    const v = (e.target as HTMLInputElement).valueAsNumber
-                    if (Number.isFinite(v)) void override({ [k.key]: v })
+                    const el = e.target as HTMLInputElement
+                    // An emptied field reverts this one knob to the preset baseline.
+                    if (el.value.trim() === '') {
+                      void clearKnob(k.key)
+                      return
+                    }
+                    const v = el.valueAsNumber
+                    // Clamp before storing so the saved override matches the
+                    // displayed (clamped) value — no stored-vs-effective drift.
+                    if (Number.isFinite(v)) {
+                      void override({ [k.key]: Math.min(k.max, Math.max(k.min, v)) })
+                    }
                   }}
                 />
               </div>
@@ -348,12 +376,9 @@ function ScoringCard() {
                 class="sc__select"
                 value={config.manufacturedGuard.sensitivity}
                 onChange={(e) =>
-                  void override({
-                    manufacturedGuard: {
-                      ...config.manufacturedGuard,
-                      sensitivity: (e.target as HTMLSelectElement)
-                        .value as ScoringConfig['manufacturedGuard']['sensitivity'],
-                    },
+                  void setGuard({
+                    sensitivity: (e.target as HTMLSelectElement)
+                      .value as ScoringConfig['manufacturedGuard']['sensitivity'],
                   })
                 }
               >
@@ -386,12 +411,9 @@ function ScoringCard() {
                 class="sc__select"
                 value={config.manufacturedGuard.severity}
                 onChange={(e) =>
-                  void override({
-                    manufacturedGuard: {
-                      ...config.manufacturedGuard,
-                      severity: (e.target as HTMLSelectElement)
-                        .value as ScoringConfig['manufacturedGuard']['severity'],
-                    },
+                  void setGuard({
+                    severity: (e.target as HTMLSelectElement)
+                      .value as ScoringConfig['manufacturedGuard']['severity'],
                   })
                 }
               >
@@ -424,7 +446,7 @@ function ScoringCard() {
                   <input
                     type="checkbox"
                     checked={config.additiveDimensions.includes(dim)}
-                    onChange={(e) => toggleAdditive(dim, (e.target as HTMLInputElement).checked)}
+                    onChange={(e) => void toggleAdditive(dim, (e.target as HTMLInputElement).checked)}
                   />
                   {DIMENSION_LABELS[dim]}
                 </label>

@@ -1,9 +1,5 @@
-import type {
-  GuardSensitivity,
-  GuardSeverity,
-  ScoringConfig,
-  ScoringPreset,
-} from '../engine/config'
+import { DEFAULT_SCORING_CONFIG } from '../engine/config'
+import type { GuardSensitivity, GuardSeverity, ScoringPreset } from '../engine/config'
 import type { DimensionKey } from '../engine/types'
 
 // The user-facing knob inventory for the Advanced scoring UI (slice C). It is the
@@ -173,17 +169,12 @@ export const DIMENSION_LABELS: Record<DimensionKey, string> = {
 }
 
 /** Additive by default — used to decide whether the current additive selection
- *  has been widened (which weakens conservatism). */
-export const DEFAULT_ADDITIVE: DimensionKey[] = ['release', 'responsiveness']
+ *  has been widened (which weakens conservatism). Derived from the engine default
+ *  so it can't drift from the balanced preset's actual additive set. */
+export const DEFAULT_ADDITIVE: DimensionKey[] = DEFAULT_SCORING_CONFIG.additiveDimensions
 
 /** True when the chosen additive set includes any dimension that is core by
  *  default — i.e. the user has removed a dimension's ability to demote. */
 export function additiveWeakens(selected: DimensionKey[]): boolean {
   return selected.some((d) => !DEFAULT_ADDITIVE.includes(d))
-}
-
-/** Narrowing helper so the UI can read/write numeric fields generically without
- *  `any`. The nine numeric keys are exactly the `number`-typed fields. */
-export function numericValue(config: ScoringConfig, key: NumericKey): number {
-  return config[key]
 }

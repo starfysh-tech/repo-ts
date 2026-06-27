@@ -31,7 +31,7 @@ The engine now scores **6 of 7** dimensions.
 
 - **User-configurable scoring** ([`PRD-user-config.md`](./PRD-user-config.md)) — exposing every threshold and policy decision in Settings (presets + advanced). **Slice A (config seam) landed:** the engine now reads an injected `ScoringConfig` (`DEFAULT_SCORING_CONFIG` = the prior constants) threaded through every scorer, the provenance gate, the manufactured-credibility guard (sensitivity + severity now config-driven), and confidence breadth; the cache key incorporates a stable `hashConfig` so a config change invalidates stale entries. Pure refactor — every fixture verdict unchanged. **Slice B (presets) landed:** `SCORING_PRESETS` (Balanced / Cautious / Minimal) + a `resolveScoringConfig` validation seam in `settings.ts` (preset baseline + per-field-validated overrides), with the service worker resolving the active config per analysis; `is-number` stays never-`caution` under every preset. **Slice C (advanced UI) landed:** a `Scoring` card on the settings page — preset selector + an `Advanced` disclosure rendering every knob from a declarative inventory (`shared/scoringKnobs.ts`), bounded, with inline "why" + warnings on conservatism-weakening choices (a loud warning on the guard's `caution` severity, which overrides the archived-only rule). Numeric bounds-clamping now lands at the `resolveScoringConfig` seam from the same `NUMERIC_BOUNDS` the inputs use. `CACHE_TTL_MS` knob deferred (separate cache seam). Manifest `0.2.7`.
 
-Suite is **150 tests** (up from 49).
+Suite is **152 tests** (up from 49).
 
 ### What's left / next
 

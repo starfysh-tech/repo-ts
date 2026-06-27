@@ -5,6 +5,7 @@ import {
   clearPat,
   setScoringPreset,
   setScoringOverrides,
+  clearScoringOverride,
   resetScoring,
 } from './settings'
 
@@ -136,5 +137,29 @@ describe('scoring settings', () => {
     })
     await resetScoring()
     expect(await getSettings()).toEqual({ pat: 'ghp_x' })
+  })
+
+  it('clearScoringOverride drops one knob, preserving the preset + other overrides', async () => {
+    stubChromeStorage({
+      settings: {
+        scoringPreset: 'cautious',
+        scoringOverrides: { veryNewDays: 1, govDistributedMin: 9 },
+      },
+    })
+    await clearScoringOverride('veryNewDays')
+    expect(await getSettings()).toEqual({
+      scoringPreset: 'cautious',
+      scoringOverrides: { govDistributedMin: 9 },
+    })
+  })
+
+  it('clearScoringOverride removes the overrides object once the last knob is cleared', async () => {
+    stubChromeStorage({
+      settings: { pat: 'ghp_x', scoringPreset: 'cautious', scoringOverrides: { veryNewDays: 1 } },
+    })
+    await clearScoringOverride('veryNewDays')
+    // The preset and PAT survive; the now-empty overrides object is gone so the
+    // stance reads as un-customized.
+    expect(await getSettings()).toEqual({ pat: 'ghp_x', scoringPreset: 'cautious' })
   })
 })

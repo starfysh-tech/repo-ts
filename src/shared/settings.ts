@@ -1,10 +1,16 @@
 import {
   DIMENSION_KEYS,
+  SCORING_PRESET_KEYS,
   SCORING_PRESETS,
   type ScoringConfig,
   type ScoringPreset,
 } from '../engine/config'
-import { NUMERIC_BOUNDS, type NumericKey } from './scoringKnobs'
+import {
+  GUARD_SENSITIVITY_OPTIONS,
+  GUARD_SEVERITY_OPTIONS,
+  NUMERIC_BOUNDS,
+  type NumericKey,
+} from './scoringKnobs'
 import type { DimensionKey } from '../engine/types'
 
 // User settings stored locally. An optional GitHub Personal Access Token (PAT)
@@ -21,9 +27,12 @@ export interface Settings {
 
 const KEY = 'settings'
 
-const PRESETS: ScoringPreset[] = ['balanced', 'cautious', 'minimal']
-const GUARD_SENSITIVITIES = ['off', 'any-2-of-3', 'all-3']
-const GUARD_SEVERITIES = ['note', 'medium', 'caution']
+// Validation vocab derived from the canonical sources so the read-time guards
+// can never drift from the type/UI. (`as string[]` so `.includes(rawString)`
+// type-checks against untrusted storage input.)
+const PRESETS = SCORING_PRESET_KEYS as string[]
+const GUARD_SENSITIVITIES = GUARD_SENSITIVITY_OPTIONS.map((o) => o.value) as string[]
+const GUARD_SEVERITIES = GUARD_SEVERITY_OPTIONS.map((o) => o.value) as string[]
 
 /** Read the stored settings, hardened against a corrupted/older-schema value.
  *  Storage is untrusted at read time (could be corrupted, manually edited, or
@@ -72,24 +81,15 @@ export function resolveScoringConfig(settings: Settings): ScoringConfig {
     return Math.min(max, Math.max(min, n))
   }
 
+  // Loop over the bounds (the single source of truth for the nine numeric keys)
+  // so adding a knob can't leave an override silently un-clamped.
+  const numeric = {} as Record<NumericKey, number>
+  for (const key of Object.keys(NUMERIC_BOUNDS) as NumericKey[]) {
+    numeric[key] = num(key, o[key], baseline[key])
+  }
+
   return {
-    veryNewDays: num('veryNewDays', o.veryNewDays, baseline.veryNewDays),
-    dormantDays: num('dormantDays', o.dormantDays, baseline.dormantDays),
-    establishedDays: num('establishedDays', o.establishedDays, baseline.establishedDays),
-    releaseRecentDays: num('releaseRecentDays', o.releaseRecentDays, baseline.releaseRecentDays),
-    govDistributedMin: num('govDistributedMin', o.govDistributedMin, baseline.govDistributedMin),
-    govDominantShare: num('govDominantShare', o.govDominantShare, baseline.govDominantShare),
-    responsiveRecentDays: num(
-      'responsiveRecentDays',
-      o.responsiveRecentDays,
-      baseline.responsiveRecentDays,
-    ),
-    responsiveActiveMin: num('responsiveActiveMin', o.responsiveActiveMin, baseline.responsiveActiveMin),
-    highConfidenceThreshold: num(
-      'highConfidenceThreshold',
-      o.highConfidenceThreshold,
-      baseline.highConfidenceThreshold,
-    ),
+    ...numeric,
     provenanceGate: typeof o.provenanceGate === 'boolean' ? o.provenanceGate : baseline.provenanceGate,
     manufacturedGuard: resolveGuard(o.manufacturedGuard, baseline.manufacturedGuard),
     additiveDimensions: resolveAdditive(o.additiveDimensions, baseline.additiveDimensions),
@@ -133,6 +133,22 @@ export async function setScoringOverrides(overrides: Partial<ScoringConfig>): Pr
       ? (raw.scoringOverrides as Partial<ScoringConfig>)
       : {}
   await chrome.storage.local.set({ [KEY]: { ...raw, scoringOverrides: { ...existing, ...overrides } } })
+}
+
+/** Drop a single advanced override, reverting that one knob to the preset
+ *  baseline (used when a numeric field is cleared). When the last override goes,
+ *  remove the `scoringOverrides` object entirely so the stance reads as un-customized. */
+export async function clearScoringOverride(key: keyof ScoringConfig): Promise<void> {
+  const raw = await readRaw()
+  const o = raw.scoringOverrides
+  if (!o || typeof o !== 'object') return
+  const { [key]: _removed, ...rest } = o as Record<string, unknown>
+  if (Object.keys(rest).length === 0) {
+    const { scoringOverrides: _drop, ...siblings } = raw
+    await chrome.storage.local.set({ [KEY]: siblings })
+  } else {
+    await chrome.storage.local.set({ [KEY]: { ...raw, scoringOverrides: rest } })
+  }
 }
 
 /** Reset scoring to defaults (Balanced): drop the preset and all overrides,
