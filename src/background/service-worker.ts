@@ -1,7 +1,7 @@
 import { analyzeRepo } from '../engine/analyzeRepo'
 import { createGithubClient } from '../engine/githubClient'
-import { DEFAULT_SCORING_CONFIG, hashConfig } from '../engine/config'
-import { getSettings } from '../shared/settings'
+import { hashConfig } from '../engine/config'
+import { getSettings, resolveScoringConfig } from '../shared/settings'
 import { readCache, writeCache } from './cache'
 import type { AnalyzeRequest } from '../shared/messages'
 import type { AnalysisOutcome } from '../engine/types'
@@ -12,10 +12,12 @@ import type { SupportedRepo } from '../content/parseRepoContext'
 async function handleAnalyze(target: SupportedRepo, refresh: boolean): Promise<AnalysisOutcome> {
   const now = new Date()
 
-  // Active scoring config. Slice A always uses the defaults; presets/overrides
-  // (slice B) will resolve it per analysis here. Its hash partitions the cache so
-  // a config change can never serve a verdict scored under different settings.
-  const config = DEFAULT_SCORING_CONFIG
+  // Read settings once per analysis, so a preset/override (or PAT) saved mid-session
+  // takes effect on the next request without a worker restart. The active scoring
+  // config is resolved here; its hash partitions the cache so a config change can
+  // never serve a verdict scored under different settings.
+  const settings = await getSettings()
+  const config = resolveScoringConfig(settings)
   const configHash = hashConfig(config)
 
   // Serve a fresh cached analysis with zero API calls (protects the 60/hr
@@ -25,12 +27,9 @@ async function handleAnalyze(target: SupportedRepo, refresh: boolean): Promise<A
     if (cached) return { status: 'ok', result: cached }
   }
 
-  // Read the optional PAT per analysis so a token saved/cleared mid-session
-  // takes effect on the next request (no worker restart needed). The token only
-  // raises the rate limit; it never changes scoring, so it stays out of the
-  // cache key.
-  const { pat } = await getSettings()
-  const client = createGithubClient(pat)
+  // The PAT only raises the rate limit; it never changes scoring, so it stays out
+  // of the cache key.
+  const client = createGithubClient(settings.pat)
 
   const outcome = await analyzeRepo({ ...client, now, config }, target)
   if (outcome.status === 'ok') await writeCache(target, outcome.result, configHash)

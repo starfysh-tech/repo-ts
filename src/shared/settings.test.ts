@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { getSettings, setPat, clearPat } from './settings'
+import {
+  getSettings,
+  setPat,
+  clearPat,
+  setScoringPreset,
+  setScoringOverrides,
+  resetScoring,
+} from './settings'
 
 // Minimal chrome.storage.local stand-in over an in-memory object, mirroring
 // watchlist.test.ts. `remove` is added because clearPat must drop a single key
@@ -81,5 +88,53 @@ describe('settings storage (chrome.storage.local)', () => {
     stubChromeStorage({ settings: { pat: 42 } })
     const settings = await getSettings()
     expect('pat' in settings).toBe(false)
+  })
+})
+
+describe('scoring settings', () => {
+  it('round-trips a preset through setScoringPreset → getSettings', async () => {
+    stubChromeStorage()
+    await setScoringPreset('cautious')
+    expect((await getSettings()).scoringPreset).toBe('cautious')
+  })
+
+  it('setScoringPreset clears any stored overrides', async () => {
+    stubChromeStorage({ settings: { scoringOverrides: { veryNewDays: 5 } } })
+    await setScoringPreset('minimal')
+    const settings = await getSettings()
+    expect(settings.scoringPreset).toBe('minimal')
+    expect('scoringOverrides' in settings).toBe(false)
+  })
+
+  it('setScoringPreset preserves a sibling PAT', async () => {
+    stubChromeStorage({ settings: { pat: 'ghp_x' } })
+    await setScoringPreset('cautious')
+    expect((await getSettings()).pat).toBe('ghp_x')
+  })
+
+  it('setScoringOverrides merges onto existing overrides instead of replacing', async () => {
+    stubChromeStorage()
+    await setScoringOverrides({ veryNewDays: 1 })
+    await setScoringOverrides({ govDistributedMin: 9 })
+    const overrides = (await getSettings()).scoringOverrides
+    expect(overrides).toEqual({ veryNewDays: 1, govDistributedMin: 9 })
+  })
+
+  it('getSettings omits an invalid preset', async () => {
+    stubChromeStorage({ settings: { scoringPreset: 'bogus' } })
+    expect((await getSettings()).scoringPreset).toBeUndefined()
+  })
+
+  it('getSettings omits a non-object scoringOverrides', async () => {
+    stubChromeStorage({ settings: { scoringOverrides: 'nope' } })
+    expect((await getSettings()).scoringOverrides).toBeUndefined()
+  })
+
+  it('resetScoring drops preset + overrides but preserves the PAT', async () => {
+    stubChromeStorage({
+      settings: { pat: 'ghp_x', scoringPreset: 'cautious', scoringOverrides: { veryNewDays: 1 } },
+    })
+    await resetScoring()
+    expect(await getSettings()).toEqual({ pat: 'ghp_x' })
   })
 })
