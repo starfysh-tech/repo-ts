@@ -1,0 +1,8 @@
+[
+  { "login": "DietrichGebert", "type": "User", "contributions": 20 },
+  { "login": "alice", "type": "User", "contributions": 18 },
+  { "login": "bob", "type": "User", "contributions": 15 },
+  { "login": "carol", "type": "User", "contributions": 12 },
+  { "login": "dave", "type": "User", "contributions": 10 },
+  { "login": "erin", "type": "User", "contributions": 9 }
+]

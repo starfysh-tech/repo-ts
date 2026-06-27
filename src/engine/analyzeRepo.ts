@@ -12,6 +12,7 @@ import type {
   TrustState,
 } from './types'
 import { HIGH_CONFIDENCE_THRESHOLD, SCORE_VERSION } from './config'
+import { detectManufacturedCredibility } from './manufacturedCredibility'
 import { scoreGovernance } from './governance'
 import { scoreProvenance } from './provenance'
 import { scoreRelease } from './release'
@@ -73,6 +74,12 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
   ]
 
   const flags: Flag[] = contributions.flatMap((c) => c.flags)
+  // Cross-dimension caveat: a very-new repo already showing every maturity signal
+  // (release + governance + responsiveness all strong) is a manufactured-trust tell.
+  // Sub-caution (medium) — surfaced as a caveat, never escalated to `caution`.
+  const manufactured = detectManufacturedCredibility(contributions, repoRes.repo, deps.now)
+  if (manufactured) flags.push(manufactured)
+
   const positives = contributions.flatMap((c) => c.positives)
   const evidenced = contributions.filter((c) => c.hasEvidence)
   const confidence = deriveConfidence(evidenced.length)
