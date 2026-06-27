@@ -13,7 +13,6 @@ export const scopeNoteStyles = `
   }
   .scopenote strong { font-weight: 600; color: inherit; }
   .scopenote p { margin: 0; }
-  .scopenote p + p { margin-top: 4px; }
   @media (prefers-color-scheme: dark) {
     .scopenote { color: #9198a1; background: rgba(255,255,255,0.04); }
   }
@@ -23,10 +22,9 @@ export function ScopeNote() {
   return (
     <aside class="scopenote" role="note">
       <p>
-        <strong>Maintenance signals, not a security review.</strong> These describe how the project
-        is run — they don't inspect the code itself.
+        <strong>Maintenance signals, not a security review.</strong> Confirm it's the official
+        source and review the code before installing.
       </p>
-      <p>Before installing, confirm this is the official source and review it yourself.</p>
     </aside>
   )
 }
