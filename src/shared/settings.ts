@@ -4,6 +4,7 @@ import {
   type ScoringConfig,
   type ScoringPreset,
 } from '../engine/config'
+import { NUMERIC_BOUNDS, type NumericKey } from './scoringKnobs'
 import type { DimensionKey } from '../engine/types'
 
 // User settings stored locally. An optional GitHub Personal Access Token (PAT)
@@ -54,26 +55,41 @@ export async function getSettings(): Promise<Settings> {
  *
  * Note: an *explicit* empty `additiveDimensions: []` is a valid advanced choice
  * (make every dimension core) and is honored; only a non-array (missing/corrupt)
- * falls back to the baseline. Numeric bounds-clamping is deferred to the slice-C UI.
+ * falls back to the baseline. Numeric overrides are clamped to each knob's bounds
+ * (`NUMERIC_BOUNDS`) so a hand-edited out-of-range value can never reach the engine.
  */
 export function resolveScoringConfig(settings: Settings): ScoringConfig {
   const baseline = SCORING_PRESETS[settings.scoringPreset ?? 'balanced'] ?? SCORING_PRESETS.balanced
   const o = settings.scoringOverrides
   if (!o || typeof o !== 'object') return baseline
 
-  const num = (v: unknown, fallback: number) =>
-    typeof v === 'number' && Number.isFinite(v) ? v : fallback
+  // A valid finite number is clamped to the knob's [min, max]; anything else
+  // falls back to the (in-bounds) baseline. Clamp, not reject, so a UI input that
+  // momentarily exceeds a bound still resolves to a usable config.
+  const num = (key: NumericKey, v: unknown, fallback: number) => {
+    const n = typeof v === 'number' && Number.isFinite(v) ? v : fallback
+    const { min, max } = NUMERIC_BOUNDS[key]
+    return Math.min(max, Math.max(min, n))
+  }
 
   return {
-    veryNewDays: num(o.veryNewDays, baseline.veryNewDays),
-    dormantDays: num(o.dormantDays, baseline.dormantDays),
-    establishedDays: num(o.establishedDays, baseline.establishedDays),
-    releaseRecentDays: num(o.releaseRecentDays, baseline.releaseRecentDays),
-    govDistributedMin: num(o.govDistributedMin, baseline.govDistributedMin),
-    govDominantShare: num(o.govDominantShare, baseline.govDominantShare),
-    responsiveRecentDays: num(o.responsiveRecentDays, baseline.responsiveRecentDays),
-    responsiveActiveMin: num(o.responsiveActiveMin, baseline.responsiveActiveMin),
-    highConfidenceThreshold: num(o.highConfidenceThreshold, baseline.highConfidenceThreshold),
+    veryNewDays: num('veryNewDays', o.veryNewDays, baseline.veryNewDays),
+    dormantDays: num('dormantDays', o.dormantDays, baseline.dormantDays),
+    establishedDays: num('establishedDays', o.establishedDays, baseline.establishedDays),
+    releaseRecentDays: num('releaseRecentDays', o.releaseRecentDays, baseline.releaseRecentDays),
+    govDistributedMin: num('govDistributedMin', o.govDistributedMin, baseline.govDistributedMin),
+    govDominantShare: num('govDominantShare', o.govDominantShare, baseline.govDominantShare),
+    responsiveRecentDays: num(
+      'responsiveRecentDays',
+      o.responsiveRecentDays,
+      baseline.responsiveRecentDays,
+    ),
+    responsiveActiveMin: num('responsiveActiveMin', o.responsiveActiveMin, baseline.responsiveActiveMin),
+    highConfidenceThreshold: num(
+      'highConfidenceThreshold',
+      o.highConfidenceThreshold,
+      baseline.highConfidenceThreshold,
+    ),
     provenanceGate: typeof o.provenanceGate === 'boolean' ? o.provenanceGate : baseline.provenanceGate,
     manufacturedGuard: resolveGuard(o.manufacturedGuard, baseline.manufacturedGuard),
     additiveDimensions: resolveAdditive(o.additiveDimensions, baseline.additiveDimensions),

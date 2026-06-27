@@ -92,4 +92,27 @@ describe('resolveScoringConfig', () => {
   it('9. unknown preset string falls back to the balanced baseline', () => {
     expect(resolveScoringConfig({ scoringPreset: 'wat' as any })).toEqual(SCORING_PRESETS.balanced)
   })
+
+  it('10. numeric override above the bound clamps to max (never reaches the engine raw)', () => {
+    // veryNewDays bound is [1, 365]; a hand-edited 99999 must clamp, not pass through.
+    expect(
+      resolveScoringConfig({ scoringOverrides: { veryNewDays: 99999 } }).veryNewDays,
+    ).toBe(365)
+  })
+
+  it('11. numeric override below the bound clamps to min', () => {
+    // A negative day count (e.g. -5) would break recency math; clamp to the min.
+    expect(
+      resolveScoringConfig({ scoringOverrides: { govDominantShare: -5 } }).govDominantShare,
+    ).toBe(0.5)
+    expect(
+      resolveScoringConfig({ scoringOverrides: { veryNewDays: 0 } }).veryNewDays,
+    ).toBe(1)
+  })
+
+  it('12. an in-range numeric override is honored unchanged', () => {
+    expect(
+      resolveScoringConfig({ scoringOverrides: { establishedDays: 1000 } }).establishedDays,
+    ).toBe(1000)
+  })
 })

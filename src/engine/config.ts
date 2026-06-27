@@ -112,6 +112,10 @@ export type ScoringPreset = 'balanced' | 'cautious' | 'minimal'
  *   caution — "lighter" never means "less protected against the high-severity
  *   signals".
  */
+/** The presets as an ordered runtime list (the type is compile-time only), for
+ *  rendering the selector and asserting each preset stays within bounds. */
+export const SCORING_PRESET_KEYS: ScoringPreset[] = ['balanced', 'cautious', 'minimal']
+
 export const SCORING_PRESETS: Record<ScoringPreset, ScoringConfig> = {
   balanced: DEFAULT_SCORING_CONFIG,
   cautious: {
