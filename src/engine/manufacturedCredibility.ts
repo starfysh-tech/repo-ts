@@ -22,7 +22,8 @@ export function detectManufacturedCredibility(
   repo: GithubRepo,
   now: Date,
 ): Flag | null {
-  if (daysBetween(now, repo.created_at) >= VERY_NEW_DAYS) return null
+  const ageDays = daysBetween(now, repo.created_at)
+  if (!Number.isFinite(ageDays) || ageDays >= VERY_NEW_DAYS) return null
 
   const isStrong = (key: DimensionKey) =>
     contributions.some(
