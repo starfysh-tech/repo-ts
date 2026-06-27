@@ -34,22 +34,47 @@ const PRESETS = SCORING_PRESET_KEYS as string[]
 const GUARD_SENSITIVITIES = GUARD_SENSITIVITY_OPTIONS.map((o) => o.value) as string[]
 const GUARD_SEVERITIES = GUARD_SEVERITY_OPTIONS.map((o) => o.value) as string[]
 
+// Serialize every read-modify-write on the settings object. chrome.storage.local
+// reads/writes are async, so two writers fired in quick succession (rapid clicks,
+// a knob edit landing while a preset switch is in flight) could each read the same
+// snapshot and clobber the other's change. Routing all mutations through one queue
+// makes each read-modify-write atomic with respect to the others.
+let writeQueue: Promise<void> = Promise.resolve()
+function mutateSettings(
+  mutator: (raw: Record<string, unknown>) => Record<string, unknown>,
+): Promise<void> {
+  const run = writeQueue.then(async () => {
+    const raw = await readRaw()
+    await chrome.storage.local.set({ [KEY]: mutator(raw) })
+  })
+  // Keep the chain alive even if one mutation rejects (e.g. a storage-quota error),
+  // so a single failure can't wedge every later write behind a rejected promise.
+  writeQueue = run.catch(() => {})
+  return run
+}
+
+/** Extract the validated scoring stance from an already-read raw object (the
+ *  scoring half of `getSettings`, without re-reading storage) — so an atomic
+ *  mutator can resolve the current config inside the write queue. */
+function readSettingsFromRaw(raw: Record<string, unknown>): Settings {
+  const settings: Settings = {}
+  if (typeof raw.scoringPreset === 'string' && PRESETS.includes(raw.scoringPreset))
+    settings.scoringPreset = raw.scoringPreset as ScoringPreset
+  if (raw.scoringOverrides && typeof raw.scoringOverrides === 'object')
+    settings.scoringOverrides = raw.scoringOverrides as Partial<ScoringConfig>
+  return settings
+}
+
 /** Read the stored settings, hardened against a corrupted/older-schema value.
  *  Storage is untrusted at read time (could be corrupted, manually edited, or
  *  written by a previous extension version), so reuse the single `readRaw`
  *  guard and only surface `pat` when it is a real non-empty string. */
 export async function getSettings(): Promise<Settings> {
   const raw = await readRaw()
-  const settings: Settings = {}
-  // Only surface a usable, trimmed token; otherwise omit the field entirely.
+  // The scoring stance (preset + raw overrides — `resolveScoringConfig` is the
+  // single seam that validates overrides field-by-field) plus the trimmed token.
+  const settings = readSettingsFromRaw(raw)
   if (typeof raw.pat === 'string' && raw.pat.trim()) settings.pat = raw.pat.trim()
-  if (typeof raw.scoringPreset === 'string' && (PRESETS as string[]).includes(raw.scoringPreset))
-    settings.scoringPreset = raw.scoringPreset as ScoringPreset
-  // Overrides stay raw here — `resolveScoringConfig` is the single seam that
-  // validates them field-by-field, so a corrupted/older-schema object can't reach
-  // the engine.
-  if (raw.scoringOverrides && typeof raw.scoringOverrides === 'object')
-    settings.scoringOverrides = raw.scoringOverrides as Partial<ScoringConfig>
   return settings
 }
 
@@ -121,41 +146,56 @@ function resolveAdditive(v: unknown, fallback: DimensionKey[]): DimensionKey[] {
 /** Select a named preset. Selecting a preset clears any advanced overrides, so the
  *  preset's baseline is exactly what takes effect. */
 export async function setScoringPreset(preset: ScoringPreset): Promise<void> {
-  const { scoringOverrides: _overrides, ...rest } = await readRaw()
-  await chrome.storage.local.set({ [KEY]: { ...rest, scoringPreset: preset } })
+  await mutateSettings(({ scoringOverrides: _overrides, ...rest }) => ({ ...rest, scoringPreset: preset }))
 }
 
 /** Merge advanced per-knob overrides on top of the current stored overrides. */
 export async function setScoringOverrides(overrides: Partial<ScoringConfig>): Promise<void> {
-  const raw = await readRaw()
-  const existing =
-    raw.scoringOverrides && typeof raw.scoringOverrides === 'object'
-      ? (raw.scoringOverrides as Partial<ScoringConfig>)
-      : {}
-  await chrome.storage.local.set({ [KEY]: { ...raw, scoringOverrides: { ...existing, ...overrides } } })
+  await mutateSettings((raw) => {
+    const existing =
+      raw.scoringOverrides && typeof raw.scoringOverrides === 'object'
+        ? (raw.scoringOverrides as Partial<ScoringConfig>)
+        : {}
+    return { ...raw, scoringOverrides: { ...existing, ...overrides } }
+  })
+}
+
+/** Atomically update the advanced overrides from the CURRENT resolved config. The
+ *  read, resolve, compute, and write all happen inside the serialized queue, so a
+ *  set-shaped edit (an additive toggle, a guard change) that replaces a whole field
+ *  computed from the prior value can't be clobbered by a concurrent edit. `compute`
+ *  returns the partial override(s) to merge. */
+export async function updateScoringOverrides(
+  compute: (current: ScoringConfig) => Partial<ScoringConfig>,
+): Promise<void> {
+  await mutateSettings((raw) => {
+    const settings = readSettingsFromRaw(raw)
+    const partial = compute(resolveScoringConfig(settings))
+    const existing = settings.scoringOverrides ?? {}
+    return { ...raw, scoringOverrides: { ...existing, ...partial } }
+  })
 }
 
 /** Drop a single advanced override, reverting that one knob to the preset
  *  baseline (used when a numeric field is cleared). When the last override goes,
  *  remove the `scoringOverrides` object entirely so the stance reads as un-customized. */
 export async function clearScoringOverride(key: keyof ScoringConfig): Promise<void> {
-  const raw = await readRaw()
-  const o = raw.scoringOverrides
-  if (!o || typeof o !== 'object') return
-  const { [key]: _removed, ...rest } = o as Record<string, unknown>
-  if (Object.keys(rest).length === 0) {
-    const { scoringOverrides: _drop, ...siblings } = raw
-    await chrome.storage.local.set({ [KEY]: siblings })
-  } else {
-    await chrome.storage.local.set({ [KEY]: { ...raw, scoringOverrides: rest } })
-  }
+  await mutateSettings((raw) => {
+    const o = raw.scoringOverrides
+    if (!o || typeof o !== 'object') return raw
+    const { [key]: _removed, ...rest } = o as Record<string, unknown>
+    if (Object.keys(rest).length === 0) {
+      const { scoringOverrides: _drop, ...siblings } = raw
+      return siblings
+    }
+    return { ...raw, scoringOverrides: rest }
+  })
 }
 
 /** Reset scoring to defaults (Balanced): drop the preset and all overrides,
  *  preserving sibling settings like the PAT. */
 export async function resetScoring(): Promise<void> {
-  const { scoringPreset: _preset, scoringOverrides: _overrides, ...rest } = await readRaw()
-  await chrome.storage.local.set({ [KEY]: rest })
+  await mutateSettings(({ scoringPreset: _preset, scoringOverrides: _overrides, ...rest }) => rest)
 }
 
 /** Raw stored object for read-modify-write. Writers must NOT round-trip through
@@ -171,12 +211,10 @@ async function readRaw(): Promise<Record<string, unknown>> {
 export async function setPat(token: string): Promise<void> {
   const trimmed = token.trim()
   if (!trimmed) return clearPat()
-  const raw = await readRaw()
-  await chrome.storage.local.set({ [KEY]: { ...raw, pat: trimmed } })
+  await mutateSettings((raw) => ({ ...raw, pat: trimmed }))
 }
 
 /** Remove the PAT, preserving any other settings. */
 export async function clearPat(): Promise<void> {
-  const { pat: _pat, ...rest } = await readRaw()
-  await chrome.storage.local.set({ [KEY]: rest })
+  await mutateSettings(({ pat: _pat, ...rest }) => rest)
 }

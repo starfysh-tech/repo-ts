@@ -9,6 +9,7 @@ import {
   setPat,
   setScoringOverrides,
   setScoringPreset,
+  updateScoringOverrides,
 } from '../shared/settings'
 import { DIMENSION_KEYS, SCORING_PRESET_KEYS, type ScoringConfig, type ScoringPreset } from '../engine/config'
 import type { DimensionKey } from '../engine/types'
@@ -238,19 +239,23 @@ function ScoringCard() {
     await reload()
   }
 
-  // Read-modify-write handlers for set-shaped knobs resolve the LATEST stored
-  // config at click time (not the render-closure `config`), so two quick edits
-  // before a reload completes can't clobber each other.
-  const freshConfig = async () => resolveScoringConfig(await getSettings())
-  const toggleAdditive = async (dim: DimensionKey, on: boolean) => {
-    const current = (await freshConfig()).additiveDimensions
-    const next = on ? [...current, dim] : current.filter((d) => d !== dim)
-    await override({ additiveDimensions: next })
+  // Set-shaped knob edits (additive toggles, guard selects) replace a whole field
+  // computed from its prior value, so they go through updateScoringOverrides — which
+  // reads-resolves-computes-writes atomically inside the settings write queue. Two
+  // rapid clicks can't read the same snapshot and clobber each other.
+  const updateOverrides = async (compute: (current: ScoringConfig) => Partial<ScoringConfig>) => {
+    await updateScoringOverrides(compute)
+    await reload()
   }
-  const setGuard = async (patch: Partial<ScoringConfig['manufacturedGuard']>) => {
-    const current = (await freshConfig()).manufacturedGuard
-    await override({ manufacturedGuard: { ...current, ...patch } })
-  }
+  const toggleAdditive = (dim: DimensionKey, on: boolean) =>
+    void updateOverrides((current) => {
+      const set = current.additiveDimensions
+      return { additiveDimensions: on ? [...set, dim] : set.filter((d) => d !== dim) }
+    })
+  const setGuard = (patch: Partial<ScoringConfig['manufacturedGuard']>) =>
+    void updateOverrides((current) => ({
+      manufacturedGuard: { ...current.manufacturedGuard, ...patch },
+    }))
 
   if (!loaded) return null
 
