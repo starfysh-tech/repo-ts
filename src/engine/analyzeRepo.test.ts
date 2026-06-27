@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { analyzeRepo } from './analyzeRepo'
+import { DEFAULT_SCORING_CONFIG, type ScoringConfig } from './config'
 import type {
   AnalysisOutcome,
   CommunityFetchResult,
@@ -236,6 +237,35 @@ describe('analyzeRepo — full three-dimension engine', () => {
     expect(dimState(outcome, 'governance')).toBe('strong')
     expect(result.flags).toEqual([]) // no flag is doing the capping — the gate is
     expect(result.trust_state).toBe('mixed_signals')
+  })
+
+  // Slice A proof: the injected config actually reaches the scorers and the
+  // rollup. Same react fixtures, only the config differs — raising establishedDays
+  // beyond any real age strips react of "established", dropping provenance
+  // strong→mixed, which the gate then caps at mixed_signals. A shift here can only
+  // come from config threading end-to-end (scorer + gate).
+  it('threads a non-default config into the engine (config seam)', async () => {
+    const a = ARCHETYPES.find((x) => x.name === 'react')!
+    const baselineOutcome = await analyze(a)
+    expect(expectOk(baselineOutcome).trust_state).toBe('strong_signals') // default config
+    expect(dimState(baselineOutcome, 'provenance')).toBe('strong')
+
+    const strict: ScoringConfig = { ...DEFAULT_SCORING_CONFIG, establishedDays: 100_000_000 }
+    const outcome = await analyzeRepo(
+      {
+        fetchRepo: async () => ({ ok: true, repo: a.repo as GithubRepo }),
+        fetchCommunityProfile: async () => ({ ok: true, profile: a.community as CommunityProfileRaw }),
+        fetchReleases: async () => ({ ok: true, releases: a.releases as GithubRelease[] }),
+        fetchContributors: async () => ({ ok: true, contributors: a.contributors as GithubContributor[] }),
+        fetchIssues: async () => ({ ok: true, issues: a.issues as GithubIssue[] }),
+        fetchPulls: async () => ({ ok: true, pulls: a.pulls as GithubPull[] }),
+        now: NOW,
+        config: strict,
+      },
+      a.target,
+    )
+    expect(dimState(outcome, 'provenance')).toBe('mixed')
+    expect(expectOk(outcome).trust_state).toBe('mixed_signals')
   })
 
   it('caveats a manufactured-credibility repo (very-new + all maturity strong), never caution', async () => {

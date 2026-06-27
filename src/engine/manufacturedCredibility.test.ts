@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { detectManufacturedCredibility } from './manufacturedCredibility'
+import { DEFAULT_SCORING_CONFIG } from './config'
 import type { DimensionContribution, DimensionKey, DimensionState, GithubRepo } from './types'
 
 const now = new Date('2026-06-24T00:00:00Z')
@@ -61,5 +62,46 @@ describe('detectManufacturedCredibility', () => {
 
   it('treats exactly VERY_NEW_DAYS (30) as no-longer-very-new (boundary)', () => {
     expect(detectManufacturedCredibility(allMaturityStrong, repoAged(30), now)).toBeNull()
+  })
+
+  it('does not fire when sensitivity is off, even with all three strong', () => {
+    const config = {
+      ...DEFAULT_SCORING_CONFIG,
+      manufacturedGuard: { sensitivity: 'off' as const, severity: 'medium' as const },
+    }
+    expect(detectManufacturedCredibility(allMaturityStrong, repoAged(10), now, config)).toBeNull()
+  })
+
+  it('fires under any-2-of-3 with exactly two maturity signals strong', () => {
+    const config = {
+      ...DEFAULT_SCORING_CONFIG,
+      manufacturedGuard: { sensitivity: 'any-2-of-3' as const, severity: 'medium' as const },
+    }
+    const twoStrong = [
+      dim('release', 'strong'),
+      dim('governance', 'strong'),
+      dim('responsiveness', 'mixed'),
+    ]
+    const flag = detectManufacturedCredibility(twoStrong, repoAged(10), now, config)
+    expect(flag).not.toBeNull()
+    expect(flag?.key).toBe('manufactured-credibility')
+  })
+
+  it('maps severity "caution" to a high-severity flag (overrides archived-only caution rule)', () => {
+    const config = {
+      ...DEFAULT_SCORING_CONFIG,
+      manufacturedGuard: { sensitivity: 'all-3' as const, severity: 'caution' as const },
+    }
+    const flag = detectManufacturedCredibility(allMaturityStrong, repoAged(10), now, config)
+    expect(flag?.severity).toBe('high')
+  })
+
+  it('maps severity "note" to a low-severity flag', () => {
+    const config = {
+      ...DEFAULT_SCORING_CONFIG,
+      manufacturedGuard: { sensitivity: 'all-3' as const, severity: 'note' as const },
+    }
+    const flag = detectManufacturedCredibility(allMaturityStrong, repoAged(10), now, config)
+    expect(flag?.severity).toBe('low')
   })
 })

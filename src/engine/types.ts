@@ -1,4 +1,5 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
+import type { ScoringConfig } from './config'
 
 // ── GitHub data (the subset of `GET /repos/{owner}/{repo}` we read) ──────────
 export interface GithubRepo {
@@ -148,6 +149,9 @@ export interface AnalyzeDeps {
   fetchPulls: (target: SupportedRepo) => Promise<PullsFetchResult>
   /** Injected reference time so age/dormancy and `analyzed_at` are deterministic in tests. */
   now: Date
+  /** Active scoring configuration. Omitted → `DEFAULT_SCORING_CONFIG` (the original
+   *  hardcoded behavior), so existing callers/tests need no change. */
+  config?: ScoringConfig
 }
 
 /**
@@ -168,7 +172,8 @@ export interface DimensionContribution {
    *  (a sparse repo reads low-confidence, not bad). */
   hasEvidence: boolean
   /** Additive dimension: it can lift the top-level verdict toward strong but must
-   *  never demote it — excluded from the trust-majority denominator. (Release.) */
+   *  never demote it — excluded from the trust-majority denominator. Assigned by
+   *  `analyzeRepo` from `config.additiveDimensions` (policy), not by the scorers. */
   additive?: boolean
   flags: Flag[]
   positives: PositiveSignal[]

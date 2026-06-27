@@ -1,6 +1,6 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
 import type { DimensionContribution, GithubIssue, GithubPull } from './types'
-import { RESPONSIVE_ACTIVE_MIN, RESPONSIVE_RECENT_DAYS } from './config'
+import { DEFAULT_SCORING_CONFIG, type ScoringConfig } from './config'
 import { daysBetween } from './time'
 
 /**
@@ -14,11 +14,12 @@ export function scoreResponsiveness(
   pulls: GithubPull[],
   target: SupportedRepo,
   now: Date,
+  config: ScoringConfig = DEFAULT_SCORING_CONFIG,
 ): DimensionContribution {
   const recent = (at: string | null) => {
     if (at == null) return false
     const days = daysBetween(now, at)
-    return Number.isFinite(days) && days <= RESPONSIVE_RECENT_DAYS
+    return Number.isFinite(days) && days <= config.responsiveRecentDays
   }
 
   // GitHub's /issues endpoint includes PRs; drop them here and count PRs
@@ -38,13 +39,12 @@ export function scoreResponsiveness(
         rationale_summary: 'No recent issue or pull-request activity.',
       },
       hasEvidence: false,
-      additive: true,
       flags: [],
       positives: [],
     }
   }
 
-  const state = recentTotal >= RESPONSIVE_ACTIVE_MIN ? 'strong' : 'mixed'
+  const state = recentTotal >= config.responsiveActiveMin ? 'strong' : 'mixed'
 
   // Point the evidence where the activity actually is — a repo can be responsive
   // mostly through PRs (e.g. commander), so an Issues-only link would mislead.
@@ -66,7 +66,6 @@ export function scoreResponsiveness(
           : 'Some recent issue or pull-request activity.',
     },
     hasEvidence: true,
-    additive: true,
     flags: [],
     positives: state === 'strong' ? [{ key: 'active-triage', label: 'Actively triaged' }] : [],
   }

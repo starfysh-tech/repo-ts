@@ -1,6 +1,6 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
 import type { DimensionContribution, DimensionState, GithubRelease, PositiveSignal } from './types'
-import { RELEASE_RECENT_DAYS } from './config'
+import { DEFAULT_SCORING_CONFIG, type ScoringConfig } from './config'
 import { daysBetween } from './time'
 
 /**
@@ -13,6 +13,7 @@ export function scoreRelease(
   releases: GithubRelease[],
   target: SupportedRepo,
   now: Date,
+  config: ScoringConfig = DEFAULT_SCORING_CONFIG,
 ): DimensionContribution {
   // Stable, published releases only: drafts aren't public, and prereleases aren't
   // the project's release-discipline signal (a repo whose only recent activity is
@@ -30,7 +31,6 @@ export function scoreRelease(
         rationale_summary: 'No published releases found.',
       },
       hasEvidence: false,
-      additive: true,
       flags: [],
       positives: [],
     }
@@ -44,7 +44,7 @@ export function scoreRelease(
     const age = daysBetween(now, r.published_at ?? r.created_at)
     return Number.isFinite(age) && age < min ? age : min
   }, Infinity)
-  const recent = latestAgeDays <= RELEASE_RECENT_DAYS
+  const recent = latestAgeDays <= config.releaseRecentDays
   const cadence = stable.length >= 2
   const state: DimensionState = recent && cadence ? 'strong' : 'mixed'
 
@@ -67,7 +67,6 @@ export function scoreRelease(
             : 'Has published releases, but the latest is old.',
     },
     hasEvidence: true,
-    additive: true,
     flags: [],
     positives,
   }

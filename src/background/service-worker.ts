@@ -1,5 +1,6 @@
 import { analyzeRepo } from '../engine/analyzeRepo'
 import { createGithubClient } from '../engine/githubClient'
+import { DEFAULT_SCORING_CONFIG, hashConfig } from '../engine/config'
 import { getSettings } from '../shared/settings'
 import { readCache, writeCache } from './cache'
 import type { AnalyzeRequest } from '../shared/messages'
@@ -11,10 +12,16 @@ import type { SupportedRepo } from '../content/parseRepoContext'
 async function handleAnalyze(target: SupportedRepo, refresh: boolean): Promise<AnalysisOutcome> {
   const now = new Date()
 
+  // Active scoring config. Slice A always uses the defaults; presets/overrides
+  // (slice B) will resolve it per analysis here. Its hash partitions the cache so
+  // a config change can never serve a verdict scored under different settings.
+  const config = DEFAULT_SCORING_CONFIG
+  const configHash = hashConfig(config)
+
   // Serve a fresh cached analysis with zero API calls (protects the 60/hr
   // budget) — unless this is an explicit per-row refresh, which forces new data.
   if (!refresh) {
-    const cached = await readCache(target, now)
+    const cached = await readCache(target, now, configHash)
     if (cached) return { status: 'ok', result: cached }
   }
 
@@ -25,8 +32,8 @@ async function handleAnalyze(target: SupportedRepo, refresh: boolean): Promise<A
   const { pat } = await getSettings()
   const client = createGithubClient(pat)
 
-  const outcome = await analyzeRepo({ ...client, now }, target)
-  if (outcome.status === 'ok') await writeCache(target, outcome.result)
+  const outcome = await analyzeRepo({ ...client, now, config }, target)
+  if (outcome.status === 'ok') await writeCache(target, outcome.result, configHash)
   return outcome
 }
 
