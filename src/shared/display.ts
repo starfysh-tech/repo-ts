@@ -68,7 +68,10 @@ export const DIM_DISPLAY: Record<DimensionState, { icon: string; label: string }
 
 export const DIM_TITLE: Record<DimensionKey, string> = {
   provenance: 'Provenance',
-  security: 'Security hygiene',
+  // "Security docs", not "Security hygiene": this dimension only checks for the
+  // presence of a security policy / code of conduct — it is documentation, not an
+  // assessment of the code's security. The old name implied the latter.
+  security: 'Security docs',
   transparency: 'Transparency',
   release: 'Release discipline',
   governance: 'Governance',

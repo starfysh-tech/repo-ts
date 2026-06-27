@@ -12,18 +12,24 @@ export const trustDetailsStyles = `
   }
   .details__chevron { font-size: 9px; width: 10px; }
   .details__body { margin-top: 8px; }
-  .details__subtitle { margin: 12px 0 4px; font-size: 11px; font-weight: 600; color: #57606a; }
-  .details__deferred { margin: 0; padding-left: 16px; font-size: 11px; color: #8b949e; }
+  .details__subtitle { margin: 12px 0 4px; font-size: 11px; font-weight: 600; color: #4a5159; }
+  .details__deferred { margin: 0; padding-left: 16px; font-size: 11px; color: #57606a; }
+  .details__deferred li { margin-top: 2px; }
+  .details__deferred strong { font-weight: 600; }
   @media (prefers-color-scheme: dark) {
     .details { border-top-color: rgba(255,255,255,0.12); }
-    .details__subtitle { color: #9198a1; }
-    .details__deferred { color: #6e7681; }
+    .details__subtitle { color: #b0b7c0; }
+    .details__deferred { color: #9198a1; }
   }
 `
 
-// The dimensions deferred from this version (shown as "not evaluated" so the
-// user is never misled into thinking they were assessed and passed).
-const DEFERRED_DIMENSIONS = ['Supply chain']
+// Dimensions NOT evaluated here, each with why its absence matters — so a user is
+// never misled into reading the verdict as comprehensive. Supply chain (malware,
+// known vulnerabilities, dependency risk) is the most security-relevant gap for a
+// pre-install decision, so it carries an explicit "check separately" note.
+const DEFERRED_DIMENSIONS = [
+  { name: 'Supply chain', note: 'malware, known vulnerabilities, and dependency risk are not checked here — assess these separately before installing.' },
+] as const
 
 // Collapsible "Trust details": the per-dimension breakdown + the deferred
 // dimensions, behind a toggle. Shared by the in-page card and the popup. Default
@@ -48,10 +54,12 @@ export function TrustDetails({ result }: { result: AnalysisResult }) {
           {(result.dimension_results ?? []).map((dim) => (
             <DimensionRow key={dim.dimension_key} dim={dim} />
           ))}
-          <h3 class="details__subtitle">Not evaluated in this version</h3>
+          <h3 class="details__subtitle">Not checked here</h3>
           <ul class="details__deferred">
-            {DEFERRED_DIMENSIONS.map((name) => (
-              <li key={name}>{name}</li>
+            {DEFERRED_DIMENSIONS.map(({ name, note }) => (
+              <li key={name}>
+                <strong>{name}</strong> — {note}
+              </li>
             ))}
           </ul>
         </div>

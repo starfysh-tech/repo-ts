@@ -6,6 +6,7 @@ import { useWatchToggle } from '../shared/useWatchToggle'
 import { trustAccent, trustDisplay, verdictSummary } from '../shared/display'
 import { ConfidenceMeter, confidenceMeterStyles } from '../shared/ConfidenceMeter'
 import { TrustDetails, trustDetailsStyles } from '../shared/TrustDetails'
+import { ScopeNote, scopeNoteStyles } from '../shared/ScopeNote'
 import { dimensionRowStyles } from '../shared/DimensionRow'
 import { Headline, headlineStyles } from '../shared/Headline'
 import { recencyLabel } from '../content/recency'
@@ -31,6 +32,7 @@ const STYLES = `
   ${confidenceMeterStyles}
   ${dimensionRowStyles}
   ${trustDetailsStyles}
+  ${scopeNoteStyles}
 `
 
 const openWatchlist = () =>
@@ -117,6 +119,7 @@ function RepoView({ target, outcome }: { target: SupportedRepo; outcome: Analysi
       <Headline icon={head.icon} label={head.label} />
       <ConfidenceMeter level={result.confidence_state} />
       <p class="pp__takeaway">{verdictSummary(result)}</p>
+      <ScopeNote />
       <p class="pp__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
       <TrustDetails result={result} />
       <SaveButton target={target} result={result} />
