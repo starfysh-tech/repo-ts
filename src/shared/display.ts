@@ -76,6 +76,9 @@ export const DIM_TITLE: Record<DimensionKey, string> = {
   release: 'Release discipline',
   governance: 'Governance',
   responsiveness: 'Responsiveness',
+  // Precise like "Security docs": v1 checks only that the repo is the canonical
+  // source of the package it declares — never malware/vuln/dependency posture.
+  package_source: 'Package source',
 }
 
 const joinWords = (xs: string[]): string =>

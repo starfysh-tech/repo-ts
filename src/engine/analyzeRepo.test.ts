@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { analyzeRepo } from './analyzeRepo'
+import { checkPackageSource } from './packageSource'
 import { DEFAULT_SCORING_CONFIG, SCORING_PRESETS, type ScoringConfig } from './config'
 import type {
   AnalysisOutcome,
   CommunityFetchResult,
   CommunityProfileRaw,
   ConfidenceState,
+  DimensionContribution,
   DimensionKey,
   DimensionState,
   GithubContributor,
@@ -123,7 +125,7 @@ const ARCHETYPES: Archetype[] = [
     trust: 'mixed_signals', confidence: 'high', provenance: 'mixed', security: 'unknown', transparency: 'strong', release: 'strong', governance: 'strong', responsiveness: 'strong' },
 ]
 
-async function analyze(a: Archetype): Promise<AnalysisOutcome> {
+async function analyze(a: Archetype, packageSource?: DimensionContribution): Promise<AnalysisOutcome> {
   return analyzeRepo(
     {
       fetchRepo: async () => ({ ok: true, repo: a.repo as GithubRepo }),
@@ -135,6 +137,26 @@ async function analyze(a: Archetype): Promise<AnalysisOutcome> {
       now: NOW,
     },
     a.target,
+    packageSource,
+  )
+}
+
+// Build a real package-source contribution through the actual checker, so the
+// integration test exercises the same shape the service worker would fold in.
+const isNumberArch = ARCHETYPES.find((a) => a.name === 'is-number')!
+function ps(repositoryUrl: string, fork = false): Promise<DimensionContribution> {
+  return checkPackageSource(
+    {
+      adapter: {
+        id: 'npm',
+        declaredPackage: () => ({ name: 'is-number' }),
+        lookup: async () => ({ kind: 'found', repositoryUrl }),
+      },
+      fetchManifest: async () => ({ name: 'is-number' }),
+      resolveRepo: async (owner, repo) => `${owner}/${repo}`,
+    },
+    isNumberArch.target,
+    { ...(isNumberArch.repo as GithubRepo), fork },
   )
 }
 
@@ -149,7 +171,7 @@ const dimState = (outcome: AnalysisOutcome, key: DimensionKey): DimensionState =
 describe('analyzeRepo — full three-dimension engine', () => {
   it('stamps every analysis with the score version and the injected time', async () => {
     const result = expectOk(await analyze(ARCHETYPES[0]))
-    expect(result.score_version).toBe('0.7.0')
+    expect(result.score_version).toBe('0.8.0')
     expect(result.analyzed_at).toBe(NOW.toISOString())
     expect(result.dimension_results.map((d) => d.dimension_key)).toEqual(['provenance', 'security', 'transparency', 'release', 'governance', 'responsiveness'])
   })
@@ -442,5 +464,39 @@ describe('evidence links — only for observed signals (never a 404)', () => {
   it('includes a README link when a README is observed', async () => {
     const outcome = await analyze(ARCHETYPES.find((a) => a.name === 'react')!)
     expect(links(outcome, 'transparency').some((l) => l.url.includes('#readme'))).toBe(true)
+  })
+})
+
+describe('analyzeRepo — package source (manual 7th dimension)', () => {
+  const dimOf = (o: AnalysisOutcome, key: DimensionKey) =>
+    expectOk(o).dimension_results.find((d) => d.dimension_key === key)
+
+  it('verified linkage appends a strong package_source row and never demotes the verdict', async () => {
+    const base = expectOk(await analyze(isNumberArch)).trust_state
+    const merged = await analyze(isNumberArch, await ps('https://github.com/jonschlinkert/is-number'))
+    // is-number stays mixed (provenance gate), and a verified lift never lowers it.
+    expect(expectOk(merged).trust_state).toBe(base)
+    expect(dimOf(merged, 'package_source')?.dimension_state).toBe('strong')
+  })
+
+  it('GUARDRAIL: is-number with a verified package source is never caution', async () => {
+    const merged = await analyze(isNumberArch, await ps('https://github.com/jonschlinkert/is-number'))
+    expect(expectOk(merged).trust_state).not.toBe('caution')
+  })
+
+  it('a confirmed mismatch (non-fork) escalates the whole verdict to caution', async () => {
+    const merged = await analyze(isNumberArch, await ps('https://github.com/someone-else/is-number', false))
+    expect(expectOk(merged).trust_state).toBe('caution')
+    expect(expectOk(merged).flags.some((f) => f.key === 'package-source-mismatch' && f.severity === 'high')).toBe(true)
+  })
+
+  it('a fork pointing elsewhere does NOT caution and does not lift', async () => {
+    const merged = await analyze(isNumberArch, await ps('https://github.com/someone-else/is-number', true))
+    expect(expectOk(merged).trust_state).not.toBe('caution')
+    expect(dimOf(merged, 'package_source')?.dimension_state).toBe('mixed')
+  })
+
+  it('without the manual check, no package_source dimension is present', async () => {
+    expect(dimOf(await analyze(isNumberArch), 'package_source')).toBeUndefined()
   })
 })

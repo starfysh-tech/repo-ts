@@ -26,7 +26,7 @@ Building the **Repo Trust Extension** — a Manifest V3 (Chromium) browser exten
 
 - **Conservative language only.** Never "safe", "trusted", "verified safe", "dangerous", or "malicious". Use "strong signals", "mixed signals", "caution", "limited evidence".
 - **Confidence is separate from trust.** A small/sparse repo is *low confidence*, not *bad*.
-- **`caution` fires only on a high-severity flag** (archived only — dormancy is contextual and never caution). Broad weakness → `mixed`. A small, finished, stable utility must never be flagged risky.
+- **`caution` fires only on a high-severity flag** — `archived`, or a **confirmed package-source impersonation mismatch** (the manual "Package source" check resolving the published package to a different live repo). Dormancy is contextual and never caution. Broad weakness → `mixed`. A small, finished, stable utility must never be flagged risky.
 - **Show qualitative states, not numeric scores**, to users.
 - **Maintenance signals, not a safety review.** Every dimension measures how a project is *maintained* (activity, governance, docs); none inspect the code for safety, and all are gameable by a motivated actor. So every verdict renders a persistent `ScopeNote` (maintenance-not-security + "confirm the official source before installing"), and unevaluated gaps (Supply chain: malware/known-vulns/dependency risk) are labelled explicitly under "Not checked here" — never implied as assessed-and-passed. The security dimension is titled **"Security docs"** (documentation presence), never "Security hygiene" (which implies the code's posture was assessed).
 

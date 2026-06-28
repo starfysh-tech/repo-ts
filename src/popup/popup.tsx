@@ -10,6 +10,7 @@ import { ScopeNote, scopeNoteStyles } from '../shared/ScopeNote'
 import { Caveats, caveatsStyles } from '../shared/Caveats'
 import { dimensionRowStyles } from '../shared/DimensionRow'
 import { Headline, headlineStyles } from '../shared/Headline'
+import { PackageSourceAction, packageSourceActionStyles } from '../shared/PackageSourceAction'
 import { recencyLabel } from '../content/recency'
 import type { AnalysisOutcome, AnalysisResult } from '../engine/types'
 
@@ -35,6 +36,7 @@ const STYLES = `
   ${trustDetailsStyles}
   ${scopeNoteStyles}
   ${caveatsStyles}
+  ${packageSourceActionStyles}
 `
 
 const openWatchlist = () =>
@@ -99,15 +101,19 @@ function Popup() {
 }
 
 function RepoView({ target, outcome }: { target: SupportedRepo; outcome: AnalysisOutcome | undefined }) {
-  const head = headlineFor(outcome)
   const repo = (
     <p class="pp__repo">
       {target.owner}/{target.repo}
     </p>
   )
-  const result = outcome?.status === 'ok' ? outcome.result : null
+  const initial = outcome?.status === 'ok' ? outcome.result : null
+  // Hold the result locally so the manual package-source check can swap in the
+  // merged (possibly escalated) verdict, re-deriving the headline from it.
+  const [result, setResult] = useState(initial)
+  useEffect(() => setResult(initial), [outcome])
 
   if (!result) {
+    const head = headlineFor(outcome)
     return (
       <div>
         <Headline icon={head.icon} label={head.label} sub={head.sub} />
@@ -116,14 +122,16 @@ function RepoView({ target, outcome }: { target: SupportedRepo; outcome: Analysi
     )
   }
 
+  const d = trustDisplay(result.trust_state)
   return (
     <div>
-      <Headline icon={head.icon} label={head.label} />
+      <Headline icon={d.icon} label={d.label} />
       <ConfidenceMeter level={result.confidence_state} />
       <p class="pp__takeaway">{verdictSummary(result)}</p>
       <Caveats flags={result.flags} />
       <ScopeNote />
       <p class="pp__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
+      <PackageSourceAction target={target} result={result} onResult={setResult} />
       <TrustDetails result={result} />
       <SaveButton target={target} result={result} />
       {repo}

@@ -10,7 +10,7 @@ const resultAt = (iso: string) => ({ analyzed_at: iso }) as unknown as AnalysisR
 describe('cache helpers', () => {
   it('keys by owner/repo, score_version, and the config hash', () => {
     const h = hashConfig(DEFAULT_SCORING_CONFIG)
-    expect(cacheKey(target('facebook', 'react'), h)).toBe(`analysis:facebook/react:0.7.0:${h}`)
+    expect(cacheKey(target('facebook', 'react'), h)).toBe(`analysis:facebook/react:0.8.0:${h}`)
   })
 
   it('partitions the cache by config: different configs yield different keys', () => {

@@ -54,6 +54,9 @@ export type DimensionKey =
   | 'release'
   | 'governance'
   | 'responsiveness'
+  // Manual, on-demand 7th dimension (canonical package↔repo linkage). Not part of
+  // the auto six; appended by the package-source check when the user runs it.
+  | 'package_source'
 export type Severity = 'high' | 'medium' | 'low' | 'very_low'
 
 export interface EvidenceLink {

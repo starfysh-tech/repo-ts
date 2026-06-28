@@ -27,7 +27,16 @@ import { scoreTransparency } from './transparency'
  * failure modes map to distinct non-verdict outcomes so a hiccup is never shown
  * as a trust judgement.
  */
-export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Promise<AnalysisOutcome> {
+export async function analyzeRepo(
+  deps: AnalyzeDeps,
+  target: SupportedRepo,
+  // The manual "Package source" check, when the user has run it. It's computed
+  // outside this path (a separate fetch lifecycle) and folded in here as a 7th,
+  // always-additive contribution so the verdict is derived in one place: a strong
+  // (verified) result lifts the majority, and a confirmed-mismatch high-severity
+  // flag escalates the rollup to `caution` exactly like `archived`.
+  packageSource?: DimensionContribution,
+): Promise<AnalysisOutcome> {
   const config = deps.config ?? DEFAULT_SCORING_CONFIG
 
   const repoRes = await deps.fetchRepo(target)
@@ -79,6 +88,10 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
     scoreGovernance(contributors, target, config),
     scoreResponsiveness(issues, pulls, target, deps.now, config),
   ].map((c) => ({ ...c, additive: additiveSet.has(c.dimension.dimension_key) }))
+
+  // Fold in the manual package-source check (already additive). Appended after the
+  // config-driven additive map so it stays additive regardless of config.
+  if (packageSource) contributions.push(packageSource)
 
   const flags: Flag[] = contributions.flatMap((c) => c.flags)
   // Cross-dimension caveat: a very-new repo already showing every maturity signal

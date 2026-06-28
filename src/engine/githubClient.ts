@@ -139,6 +139,24 @@ export function createGithubClient(token?: string) {
     return { ok: true, pulls }
   }
 
+  /**
+   * Root `package.json` for the manual package-source check. Returns the parsed
+   * manifest, or null when absent/unreadable (a missing manifest is "no package",
+   * never an error). The contents API returns base64 with embedded newlines, so
+   * strip whitespace before decoding.
+   */
+  async function fetchPackageJson(target: SupportedRepo): Promise<unknown | null> {
+    const res = await getJson(`/repos/${target.owner}/${target.repo}/contents/package.json`)
+    if (!res.ok) return null
+    const body = res.data as { content?: unknown; encoding?: unknown }
+    if (typeof body?.content !== 'string') return null
+    try {
+      return JSON.parse(atob(body.content.replace(/\s/g, '')))
+    } catch {
+      return null
+    }
+  }
+
   return {
     fetchRepo,
     fetchCommunityProfile,
@@ -146,5 +164,6 @@ export function createGithubClient(token?: string) {
     fetchContributors,
     fetchIssues,
     fetchPulls,
+    fetchPackageJson,
   }
 }
