@@ -274,6 +274,12 @@ function KnobRow({
   onCommit: (v: number) => void
   onReset: () => void
 }) {
+  // Local draft so dragging the slider / typing in the field updates the readout
+  // live (onInput), while the storage write happens once on commit (onChange:
+  // slider release or field blur). Re-syncs whenever the resolved value changes.
+  const [draft, setDraft] = useState(value)
+  useEffect(() => setDraft(value), [value])
+
   const custom = value !== baseline
   const id = `knob-${knob.key}`
   const clamp = (v: number) => Math.min(knob.max, Math.max(knob.min, v))
@@ -298,7 +304,8 @@ function KnobRow({
           min={knob.min}
           max={knob.max}
           step={knob.step}
-          value={value}
+          value={draft}
+          onInput={(e) => setDraft(clamp((e.target as HTMLInputElement).valueAsNumber))}
           onChange={(e) => onCommit(clamp((e.target as HTMLInputElement).valueAsNumber))}
         />
         <input
@@ -308,7 +315,13 @@ function KnobRow({
           min={knob.min}
           max={knob.max}
           step={knob.step}
-          value={value}
+          value={draft}
+          // Track raw input live (no clamp mid-type, so e.g. "150" doesn't snap to
+          // the min on the first digit); clamp + commit only on blur/Enter.
+          onInput={(e) => {
+            const v = (e.target as HTMLInputElement).valueAsNumber
+            if (Number.isFinite(v)) setDraft(v)
+          }}
           onChange={(e) => {
             const el = e.target as HTMLInputElement
             if (el.value.trim() === '') return onReset()
