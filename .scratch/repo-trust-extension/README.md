@@ -37,7 +37,8 @@ Suite is **152 tests** (up from 49).
 
 1. **Finish in-browser dogfood QA** — card + popup + settings verified by eye; not yet: the new caveat list on a manufactured-pattern repo, watchlist save/refresh/remove, SPA repo→repo nav, rate-limit/error/private/loading states.
 2. **Deferred review item** — engine should emit structured rationale segments (explicit link slots) instead of `DimensionRow` string-matching link labels against rationale prose.
-3. **Backlog** — 1 deferred dimension (Supply chain), share, cloud enrichment, canonicality/typosquat verification, Chrome Web Store packaging.
+3. **Backlog** — share, cloud enrichment, Chrome Web Store packaging.
+   - **Package source (Supply-chain v1)** ([`PRD-package-source.md`](./PRD-package-source.md), `ready-for-agent`) — a manual, on-demand 7th dimension checking canonical package↔repo linkage (npm-first, behind a registry-agnostic seam). Confirmed impersonation mismatch → `caution` (a 2nd trigger alongside `archived`), made safe by fork-gating + resolving the registry URL through GitHub (transfer/rename redirects). Design validated against 10 real repos (caught the `draft-js` transfer false-positive + the monorepo private-root gap).
 
 ## How issues were worked
 
