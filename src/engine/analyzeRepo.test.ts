@@ -148,7 +148,6 @@ function ps(repositoryUrl: string, fork = false): Promise<DimensionContribution>
   return checkPackageSource(
     {
       adapter: {
-        id: 'npm',
         declaredPackage: () => ({ name: 'is-number' }),
         lookup: async () => ({ kind: 'found', repositoryUrl }),
       },
@@ -498,5 +497,33 @@ describe('analyzeRepo — package source (manual 7th dimension)', () => {
 
   it('without the manual check, no package_source dimension is present', async () => {
     expect(dimOf(await analyze(isNumberArch), 'package_source')).toBeUndefined()
+  })
+
+  // A verified package source for an arbitrary archetype (resolves to its own repo).
+  function verifiedPsFor(a: Archetype): Promise<DimensionContribution> {
+    const full = `${a.target.owner}/${a.target.repo}`
+    return checkPackageSource(
+      {
+        adapter: {
+          declaredPackage: () => ({ name: 'pkg' }),
+          lookup: async () => ({ kind: 'found', repositoryUrl: `https://github.com/${full}` }),
+        },
+        fetchManifest: async () => ({ name: 'pkg' }),
+        resolveRepo: async (owner, repo) => `${owner}/${repo}`,
+      },
+      a.target,
+      { ...(a.repo as GithubRepo), full_name: full },
+    )
+  }
+
+  it('a verified package source does not change confidence (a sparse repo stays insufficient_evidence)', async () => {
+    // hex-to-rgb is low-confidence / insufficient_evidence. A manual verified check
+    // must not bump its confidence breadth and lift it out of insufficient_evidence.
+    const arch = ARCHETYPES.find((a) => a.name === 'hex-to-rgb')!
+    const base = expectOk(await analyze(arch))
+    const merged = expectOk(await analyze(arch, await verifiedPsFor(arch)))
+    expect(merged.confidence_state).toBe(base.confidence_state)
+    expect(merged.trust_state).toBe('insufficient_evidence')
+    expect(dimOf({ status: 'ok', result: merged }, 'package_source')?.dimension_state).toBe('strong')
   })
 })

@@ -103,7 +103,12 @@ export async function analyzeRepo(
 
   const positives = contributions.flatMap((c) => c.positives)
   const evidenced = contributions.filter((c) => c.hasEvidence)
-  const confidence = deriveConfidence(evidenced.length, config.highConfidenceThreshold)
+  // Confidence is the breadth of the AUTO dimensions only: the manual
+  // package-source check lifts the strong tally and can fire caution, but a user
+  // action must not move how confidently the verdict is held (a sparse repo
+  // shouldn't leave "insufficient evidence" just because linkage was checked).
+  const autoEvidenced = evidenced.filter((c) => c.dimension.dimension_key !== 'package_source')
+  const confidence = deriveConfidence(autoEvidenced.length, config.highConfidenceThreshold)
   const trustState = deriveTrustState(evidenced, flags, confidence, config)
 
   const result: AnalysisResult = {
@@ -150,9 +155,10 @@ function errorOutcome(fetched: Extract<RepoFetchResult, { ok: false }>): Analysi
   }
 }
 
-/** Confidence = breadth of evidence across the four dimensions: ≥threshold
+/** Confidence = breadth of evidence across the auto dimensions: ≥threshold
  *  evidenced → high, one fewer → medium, ≤1 → low. A sparse repo reads
- *  low-confidence (limited evidence), not low-trust. */
+ *  low-confidence (limited evidence), not low-trust. (The manual package-source
+ *  dimension is excluded by the caller — a user action shouldn't move confidence.) */
 function deriveConfidence(evidencedCount: number, highThreshold: number): ConfidenceState {
   if (evidencedCount >= highThreshold) return 'high'
   if (evidencedCount >= highThreshold - 1) return 'medium'
@@ -161,7 +167,7 @@ function deriveConfidence(evidencedCount: number, highThreshold: number): Confid
 
 /** Deterministic top-level rollup (PRD order); `evidenced` is the set of
  *  dimensions that produced evidence:
- *  1. any high-severity flag (archived) → caution
+ *  1. any high-severity flag (archived, or a confirmed package-source mismatch) → caution
  *  2. low confidence → insufficient_evidence
  *  3. provenance strong AND majority of the evidenced CORE dimensions strong AND no
  *     negative flags → strong_signals

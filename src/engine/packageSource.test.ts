@@ -24,7 +24,6 @@ const repoOf = (full_name: string, fork = false): GithubRepo => ({
 // A stub npm-style adapter: declaredPackage reads name/private/workspaces; lookup
 // answers from an injected map. Mirrors the real npm adapter's contract.
 const stubAdapter = (lookups: Record<string, RegistryLookup>): RegistryAdapter => ({
-  id: 'npm',
   declaredPackage(manifest) {
     if (!manifest || typeof manifest !== 'object') return { name: null, reason: 'none' }
     const m = manifest as Record<string, unknown>
@@ -67,6 +66,16 @@ describe('parseGithubRepo', () => {
     expect(parseGithubRepo('https://gitlab.com/o/r')).toBeNull()
     expect(parseGithubRepo(null)).toBeNull()
     expect(parseGithubRepo('')).toBeNull()
+  })
+  it('rejects look-alike hosts that merely contain "github.com" (anti-forgery)', () => {
+    // These all contain the substring "github.com/" but are NOT github.com — they
+    // must not parse, or an attacker could forge a verified linkage.
+    expect(parseGithubRepo('https://fakegithub.com/victim/repo')).toBeNull()
+    expect(parseGithubRepo('https://notgithub.com/o/r')).toBeNull()
+    expect(parseGithubRepo('https://my-github.com/o/r')).toBeNull()
+    expect(parseGithubRepo('https://github.com.evil.com/o/r')).toBeNull()
+    // …but real github.com (incl. www.) still parses.
+    expect(parseGithubRepo('https://www.github.com/o/r')).toEqual({ owner: 'o', repo: 'r' })
   })
 })
 
@@ -149,14 +158,17 @@ describe('checkPackageSource', () => {
     expect(hasHighFlag(c)).toBe(false)
   })
 
-  it('monorepo: private/workspaces root → no-package with the honest monorepo message', async () => {
-    const priv = await checkPackageSource(deps({ manifest: { private: true } }), target('facebook', 'react'), repoOf('facebook/react'))
-    expect(priv.dimension.dimension_state).toBe('unknown')
-    expect(priv.dimension.rationale_segments[0].text).toContain('monorepo')
-
+  it('private/workspaces root → no-package, with copy matching the reason (no false caution)', async () => {
+    // A workspaces root reads as a monorepo; a bare private root says "private",
+    // NOT "monorepo" (it isn't necessarily one).
     const ws = await checkPackageSource(deps({ manifest: { name: 'root', workspaces: ['packages/*'] } }), target('babel', 'babel'), repoOf('babel/babel'))
+    expect(ws.dimension.dimension_state).toBe('unknown')
     expect(ws.dimension.rationale_segments[0].text).toContain('monorepo')
     expect(hasHighFlag(ws)).toBe(false)
+
+    const priv = await checkPackageSource(deps({ manifest: { private: true } }), target('facebook', 'react'), repoOf('facebook/react'))
+    expect(priv.dimension.rationale_segments[0].text).toContain('private')
+    expect(priv.dimension.rationale_segments[0].text).not.toContain('monorepo')
   })
 
   it('unpublished: declared name not on the registry → unknown, never caution', async () => {

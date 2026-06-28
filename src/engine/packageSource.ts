@@ -16,7 +16,6 @@ export type DeclaredPackage =
   | { name: null; reason: 'none' | 'private' | 'workspaces' }
 
 export interface RegistryAdapter {
-  readonly id: string
   /** Read the declared package name from a parsed root manifest (npm: package.json). */
   declaredPackage(manifest: unknown): DeclaredPackage
   /** Look the name up on the registry and return its declared repository URL. */
@@ -51,7 +50,11 @@ export function parseGithubRepo(url: string | null | undefined): { owner: string
   u = u.replace(/^(git:|ssh:|https?:)\/\//, '')
   u = u.replace(/^git@github\.com:/, 'github.com/')
   u = u.replace(/^github:/, 'github.com/')
-  const m = u.match(/github\.com[/:]([^/]+)\/([^/#?]+)/)
+  u = u.replace(/^www\./, '')
+  // Anchor the host: match `github.com/owner/repo` only at the START of the
+  // (scheme-stripped) string, so a look-alike host like `fakegithub.com/o/r` —
+  // which contains the substring `github.com/` — can't forge a verified linkage.
+  const m = u.match(/^github\.com[/:]([^/]+)\/([^/#?]+)/)
   if (!m) return null
   return { owner: m[1], repo: m[2].replace(/\.git$/, '') }
 }
@@ -187,11 +190,13 @@ function fork(name: string, upstream: string): DimensionContribution {
 }
 
 function noPackage(reason: 'none' | 'private' | 'workspaces'): DimensionContribution {
-  const segments: RationaleSegment[] =
-    reason === 'none'
-      ? [{ text: 'No published package detected for this repository.' }]
-      : [{ text: 'No published package at the repository root (this looks like a monorepo) — per-package linkage is not checked here yet.' }]
-  return contribution('unknown', 'low', 'no_package', segments, { hasEvidence: false })
+  const text =
+    reason === 'workspaces'
+      ? 'No published package at the repository root (this looks like a monorepo) — per-package linkage is not checked here yet.'
+      : reason === 'private'
+        ? 'The repository root declares no published package (its root package.json is private).'
+        : 'No published package detected for this repository.'
+  return contribution('unknown', 'low', 'no_package', [{ text }], { hasEvidence: false })
 }
 
 function unknownOutcome(outcome: 'unpublished' | 'unverifiable', name: string): DimensionContribution {

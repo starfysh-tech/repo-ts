@@ -14,7 +14,6 @@ export type RegistryFetch = (url: string) => Promise<{ ok: true; data: unknown }
  */
 export function createNpmAdapter(fetchJson: RegistryFetch): RegistryAdapter {
   return {
-    id: 'npm',
     declaredPackage(manifest): DeclaredPackage {
       if (!manifest || typeof manifest !== 'object') return { name: null, reason: 'none' }
       const m = manifest as Record<string, unknown>

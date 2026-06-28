@@ -49,4 +49,14 @@ describe('verdictSummary', () => {
   it('falls back to a generic line when there are no evaluated dimensions', () => {
     expect(verdictSummary(result([]))).toBe('Mixed evidence across the evaluated areas.')
   })
+
+  it('excludes the manual package_source dimension from the takeaway', () => {
+    // A fork's package_source is `mixed`, but it must not inject "mixed package
+    // source" into the auto-six takeaway (an honest fork is not a weakness).
+    expect(
+      verdictSummary(
+        result([dim('provenance', 'strong'), dim('transparency', 'strong'), dim('package_source', 'mixed')]),
+      ),
+    ).toBe('Strong provenance and transparency.')
+  })
 })

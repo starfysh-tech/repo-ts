@@ -6,35 +6,14 @@ import { CACHE_TTL_MS, SCORE_VERSION } from '../engine/config'
 // score_version, AND a hash of the active scoring config — so a scoring-rules bump
 // (new SCORE_VERSION) OR a config value change naturally invalidates prior entries:
 // old keys are simply never read again. `configHash` comes from `hashConfig(config)`.
+// A single cache entry per repo holds the current verdict. The manual
+// package-source check writes its merged (possibly caution-escalated) result
+// back into this same entry, so a re-visit is "remembered" and the card,
+// popup, and watchlist never disagree. A forced refresh re-derives the base
+// verdict here (the manual check must be re-run to re-augment) — one source of
+// truth, no stale shadow.
 export function cacheKey(target: SupportedRepo, configHash: string): string {
   return `analysis:${target.owner}/${target.repo}:${SCORE_VERSION}:${configHash}`
-}
-
-/** Separate key for the package-source-augmented result. Once the user runs the
- *  manual check, the merged (possibly escalated) verdict is cached here and
- *  preferred over the base analysis on re-visit, so the result is "remembered". */
-export function packageSourceCacheKey(target: SupportedRepo, configHash: string): string {
-  return `pkgsrc:${target.owner}/${target.repo}:${SCORE_VERSION}:${configHash}`
-}
-
-export async function readPackageSourceCache(
-  target: SupportedRepo,
-  now: Date,
-  configHash: string,
-): Promise<AnalysisResult | null> {
-  const key = packageSourceCacheKey(target, configHash)
-  const stored = await chrome.storage.local.get(key)
-  const result = stored[key] as AnalysisResult | undefined
-  if (!result || !isFresh(result, now)) return null
-  return result
-}
-
-export async function writePackageSourceCache(
-  target: SupportedRepo,
-  result: AnalysisResult,
-  configHash: string,
-): Promise<void> {
-  await chrome.storage.local.set({ [packageSourceCacheKey(target, configHash)]: result })
 }
 
 /** A cached result is fresh while it is within the TTL of the reference time. */
