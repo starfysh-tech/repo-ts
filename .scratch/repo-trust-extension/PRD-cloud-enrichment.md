@@ -51,6 +51,10 @@ This is the first time the product talks to infrastructure we control and the fi
   Distinct non-result responses (never an alarm on the client): `no_dependency_data` (repo has no resolvable dependency graph), `unavailable` (transient). No user identity in the request.
 - Backend internals (recommended, not binding): authenticated GitHub token → `GET /repos/{o}/{r}/dependency-graph/sbom` for resolved PURLs/versions → OSV `POST /v1/querybatch` (open, multi-ecosystem) primary, GHSA via the same token optional for richer GitHub-curated data. Cache by `owner/repo` with a TTL to bound cost; per-client rate limit.
 
+### Deployment (v1) — DECIDED & LIVE
+- **Backend is built and deployed:** a Cloudflare Worker + Workers KV, in the sibling repo `../repo-trust-backend`, live at **`https://repo-trust-backend.randall-847.workers.dev`** (route `POST /v1/advisories`). Smoke-tested end-to-end: real GitHub SBOM resolution → OSV query, KV cache hit/miss, input guard (`400 bad_request`), and `no_dependency_data`.
+- The extension must read this base URL from a **single constant** (later overridable in Settings), never hardcoded across files. The injected `fetchAdvisories` seam owns the actual `fetch`.
+
 ### Privacy boundary
 - **Manual, per-repo, opt-in.** Only the public `owner/repo` leaves the device, only on an explicit click. No PAT, no scoring config, no user identity sent. A **one-time consent** gate before the first backend call, plus a persistent note in the panel + settings stating what's sent and the backend's no-retention policy. The existing "stored locally … except api.github.com" copy is amended to name the backend explicitly as a user-triggered exception.
 
@@ -62,7 +66,7 @@ This is the first time the product talks to infrastructure we control and the fi
 - Result cached per repo (with `as_of`) so a revisit shows it without re-sending; a manual "re-check" re-sends.
 
 ### Open / deferred (the user has resources; these are infra calls)
-- Backend **stack + hosting** (a TS serverless endpoint fits the repo, but it's the owner's infra call).
+- ~~Backend **stack + hosting**~~ — **RESOLVED:** Cloudflare Worker + Workers KV (see "Deployment (v1)" above), deployed and smoke-tested.
 - **Premium/entitlement/auth** — v1 may ship open or behind a thin gate; the premium model is a separate decision. If auth is added, it must not undermine the no-identity-retention posture.
 - Advisory **source mix** (OSV-only vs OSV+GHSA) and **ecosystem coverage** (whatever the dependency graph + OSV return — no per-ecosystem adapter needed, unlike Package source).
 
