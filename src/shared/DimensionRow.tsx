@@ -1,5 +1,4 @@
-import type { JSX } from 'preact'
-import type { DimensionResult } from '../engine/types'
+import type { DimensionResult, EvidenceLink, RationaleSegment } from '../engine/types'
 import { DIM_ACCENT, DIM_DISPLAY, DIM_TITLE, NEUTRAL_ACCENT } from './display'
 
 // Co-located styles (see ConfidenceMeter for the rationale).
@@ -16,57 +15,25 @@ export const dimensionRowStyles = `
   }
 `
 
-const isWordChar = (ch: string | undefined) => ch != null && /[a-z0-9]/i.test(ch)
-
-/** Index of `needle` in `haystack` as a case-insensitive whole word, or -1. */
-export function findWholeWord(haystack: string, needle: string): number {
-  if (!needle) return -1
-  const hay = haystack.toLowerCase()
-  const target = needle.toLowerCase()
-  for (let from = 0; ; ) {
-    const i = hay.indexOf(target, from)
-    if (i < 0) return -1
-    if (!isWordChar(haystack[i - 1]) && !isWordChar(haystack[i + target.length])) return i
-    from = i + 1
-  }
+/** Evidence links not already woven inline into the rationale — matched by URL
+ *  (exact), not by string-searching the prose — render as trailing chips. */
+export function chipLinks(segments: RationaleSegment[], links: EvidenceLink[]): EvidenceLink[] {
+  const inlined = new Set(segments.map((s) => s.href).filter(Boolean))
+  return links.filter((l) => !inlined.has(l.url))
 }
 
 // One dimension's row: icon + title + state (accent-colored, supplementary to
-// the icon/text), an evidence-first rationale, and evidence links. A link whose
-// label is named in the rationale (e.g. "README") folds inline; the rest render
-// as trailing chips. Shared by the in-page card and the popup.
+// the icon/text), an evidence-first rationale, and evidence links. The engine
+// emits the rationale as segments with explicit inline-link slots; any evidence
+// link not woven inline renders as a trailing chip. Shared by card and popup.
 export function DimensionRow({ dim }: { dim: DimensionResult }) {
   // Tolerate a corrupted/old-schema stored dimension: unexpected state or
-  // missing links degrade rather than crashing the whole card render.
+  // missing segments/links degrade rather than crashing the whole card render.
   const s = DIM_DISPLAY[dim.dimension_state] ?? { icon: '?', label: 'Unknown' }
   const accent = DIM_ACCENT[dim.dimension_state] ?? NEUTRAL_ACCENT
   const links = dim.evidence_links ?? []
-
-  const inlined = new Set<string>()
-  const segments: (string | JSX.Element)[] = [dim.rationale_summary ?? '']
-  for (const link of links) {
-    for (let i = 0; i < segments.length; i++) {
-      const seg = segments[i]
-      if (typeof seg !== 'string') continue
-      // Case-insensitive, whole-word match (the rationale says "security policy"
-      // while the label is "Security policy"; and we must not splice mid-word).
-      const at = findWholeWord(seg, link.label)
-      if (at < 0) continue
-      segments.splice(
-        i,
-        1,
-        seg.slice(0, at),
-        // Link the rationale's own words (its casing), not the label's.
-        <a href={link.url} target="_blank" rel="noopener noreferrer">
-          {seg.slice(at, at + link.label.length)}
-        </a>,
-        seg.slice(at + link.label.length),
-      )
-      inlined.add(link.url)
-      break
-    }
-  }
-  const chips = links.filter((l) => !inlined.has(l.url))
+  const segments = dim.rationale_segments ?? []
+  const chips = chipLinks(segments, links)
 
   return (
     <div class="dim">
@@ -79,7 +46,17 @@ export function DimensionRow({ dim }: { dim: DimensionResult }) {
           {s.label}
         </span>
       </div>
-      <p class="dim__rationale">{segments}</p>
+      <p class="dim__rationale">
+        {segments.map((seg, i) =>
+          seg.href ? (
+            <a key={i} href={seg.href} target="_blank" rel="noopener noreferrer">
+              {seg.text}
+            </a>
+          ) : (
+            seg.text
+          ),
+        )}
+      </p>
       {chips.length > 0 && (
         <ul class="dim__links">
           {chips.map((link) => (

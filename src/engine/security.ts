@@ -17,10 +17,11 @@ export function scoreSecurity(files: CommunityFiles, target: SupportedRepo): Dim
   const triggered: string[] = []
   const evidenceLinks = []
 
+  const securityUrl = `https://github.com/${target.owner}/${target.repo}/security/policy`
   if (files.security) {
     positives.push({ key: 'security-policy', label: 'Security policy' })
     triggered.push('security-policy')
-    evidenceLinks.push({ label: 'Security policy', url: `https://github.com/${target.owner}/${target.repo}/security/policy` })
+    evidenceLinks.push({ label: 'Security policy', url: securityUrl })
   }
   if (files.code_of_conduct) {
     positives.push({ key: 'code-of-conduct', label: 'Code of conduct' })
@@ -37,11 +38,11 @@ export function scoreSecurity(files: CommunityFiles, target: SupportedRepo): Dim
       confidence_state: hasEvidence ? 'high' : 'low',
       triggered_signals: triggered,
       evidence_links: evidenceLinks,
-      rationale_summary: files.security
-        ? 'Publishes a security policy.'
+      rationale_segments: files.security
+        ? [{ text: 'Publishes a ' }, { text: 'security policy', href: securityUrl }, { text: '.' }]
         : files.code_of_conduct
-          ? 'Has a code of conduct; no security policy found.'
-          : 'No security policy or code of conduct found.',
+          ? [{ text: 'Has a code of conduct; no security policy found.' }]
+          : [{ text: 'No security policy or code of conduct found.' }],
     },
     hasEvidence,
     flags: [],

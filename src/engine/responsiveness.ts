@@ -36,7 +36,7 @@ export function scoreResponsiveness(
         confidence_state: 'low',
         triggered_signals: [],
         evidence_links: [],
-        rationale_summary: 'No recent issue or pull-request activity.',
+        rationale_segments: [{ text: 'No recent issue or pull-request activity.' }],
       },
       hasEvidence: false,
       flags: [],
@@ -60,10 +60,16 @@ export function scoreResponsiveness(
       confidence_state: 'high',
       triggered_signals: ['recent-activity', state],
       evidence_links,
-      rationale_summary:
-        state === 'strong'
-          ? 'Issues and pull requests are actively handled.'
-          : 'Some recent issue or pull-request activity.',
+      // Issues / Pull requests links are conditional (a repo can be responsive via
+      // PRs alone), so the prose stays plain text and the links render as chips.
+      rationale_segments: [
+        {
+          text:
+            state === 'strong'
+              ? 'Issues and pull requests are actively handled.'
+              : 'Some recent issue or pull-request activity.',
+        },
+      ],
     },
     hasEvidence: true,
     flags: [],

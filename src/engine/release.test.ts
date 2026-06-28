@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { scoreRelease } from './release'
+import { rationaleText } from './rationale'
 import type { GithubRelease } from './types'
 import type { SupportedRepo } from '../content/parseRepoContext'
 
@@ -41,14 +42,16 @@ describe('scoreRelease', () => {
   it('reads mixed for a single recent release (no cadence)', () => {
     const c = score([rel()])
     expect(c.dimension.dimension_state).toBe('mixed')
-    expect(c.dimension.rationale_summary).toBe('Has a recent release.')
+    expect(rationaleText(c.dimension.rationale_segments)).toBe('Has a recent release.')
   })
 
   it('reads mixed when releases exist but the latest is old', () => {
     const old = (tag: string, at: string) => rel({ tag_name: tag, created_at: at, published_at: at })
     const c = score([old('v2', '2020-01-01T00:00:00Z'), old('v1', '2019-01-01T00:00:00Z')])
     expect(c.dimension.dimension_state).toBe('mixed')
-    expect(c.dimension.rationale_summary).toBe('Has published releases, but the latest is old.')
+    expect(rationaleText(c.dimension.rationale_segments)).toBe(
+      'Has published releases, but the latest is old.',
+    )
   })
 
   it('ignores prereleases — a prerelease-only repo reads as no evidence', () => {

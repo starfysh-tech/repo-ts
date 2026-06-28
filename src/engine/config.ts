@@ -8,7 +8,7 @@ import type { DimensionKey } from './types'
 
 /** Bumps on a shape/logic change to the analysis (invalidates every cached
  *  entry). Distinct from user value changes, which the config hash handles. */
-export const SCORE_VERSION = '0.6.0'
+export const SCORE_VERSION = '0.7.0'
 
 /** Cache TTL and the threshold past which a result reads as "stale". Within this
  *  window a revisit serves the cached analysis with zero API calls. Not yet part
