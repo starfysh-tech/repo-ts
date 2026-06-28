@@ -12,6 +12,9 @@ describe('npm adapter — declaredPackage', () => {
   it('reads a plain package name', () => {
     expect(a.declaredPackage({ name: 'is-number' })).toEqual({ name: 'is-number' })
   })
+  it('trims surrounding whitespace so the registry URL is well-formed', () => {
+    expect(a.declaredPackage({ name: '  is-number  ' })).toEqual({ name: 'is-number' })
+  })
   it('private root → no package (monorepo)', () => {
     expect(a.declaredPackage({ name: 'x', private: true })).toEqual({ name: null, reason: 'private' })
   })

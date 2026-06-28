@@ -151,7 +151,10 @@ export function createGithubClient(token?: string) {
     const body = res.data as { content?: unknown; encoding?: unknown }
     if (typeof body?.content !== 'string') return null
     try {
-      return JSON.parse(atob(body.content.replace(/\s/g, '')))
+      // Decode base64 → bytes → UTF-8 (not `atob` directly, which is Latin-1 and
+      // would mojibake any non-ASCII field in the manifest).
+      const bytes = Uint8Array.from(atob(body.content.replace(/\s/g, '')), (c) => c.charCodeAt(0))
+      return JSON.parse(new TextDecoder().decode(bytes))
     } catch {
       return null
     }

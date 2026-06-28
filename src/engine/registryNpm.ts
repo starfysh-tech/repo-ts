@@ -21,7 +21,10 @@ export function createNpmAdapter(fetchJson: RegistryFetch): RegistryAdapter {
       // package — honest "no package at the root", not a negative signal.
       if (m.private === true) return { name: null, reason: 'private' }
       if (m.workspaces != null) return { name: null, reason: 'workspaces' }
-      return typeof m.name === 'string' && m.name.trim() ? { name: m.name } : { name: null, reason: 'none' }
+      // Return the trimmed name — a hand-edited manifest with padded whitespace
+      // would otherwise produce a malformed registry URL.
+      const name = typeof m.name === 'string' ? m.name.trim() : ''
+      return name ? { name } : { name: null, reason: 'none' }
     },
     async lookup(name): Promise<RegistryLookup> {
       const res = await fetchJson(`${REGISTRY}/${name.replace(/\//g, '%2F')}`)
