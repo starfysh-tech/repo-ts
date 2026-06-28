@@ -11,6 +11,7 @@ import {
   DIMENSION_LABELS,
   GUARD_SENSITIVITY_OPTIONS,
   GUARD_SEVERITY_OPTIONS,
+  KNOB_GROUPS,
   NUMERIC_BOUNDS,
   NUMERIC_KNOBS,
   PRESET_COPY,
@@ -71,5 +72,18 @@ describe('scoring knob inventory', () => {
     expect(additiveWeakens(DEFAULT_ADDITIVE)).toBe(false)
     expect(additiveWeakens([])).toBe(false) // all-core is stricter, not weaker
     expect(additiveWeakens(['release', 'provenance'])).toBe(true) // provenance is core by default
+  })
+
+  it('7. every numeric knob maps to a declared group, and every group has at least one knob', () => {
+    const groupKeys = KNOB_GROUPS.map((g) => g.key)
+    for (const k of NUMERIC_KNOBS) {
+      expect(groupKeys, `${k.key}.group`).toContain(k.group)
+      expect(k.unit, `${k.key}.unit`).toBeTypeOf('string')
+      expect(k.higherIsStricter, `${k.key}.higherIsStricter`).toBeTypeOf('boolean')
+    }
+    // No empty group (an empty section would render a confusing blank disclosure).
+    for (const g of KNOB_GROUPS) {
+      expect(NUMERIC_KNOBS.some((k) => k.group === g.key), `group ${g.key} has a knob`).toBe(true)
+    }
   })
 })

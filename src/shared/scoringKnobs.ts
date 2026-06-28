@@ -21,6 +21,18 @@ export type NumericKey =
   | 'responsiveActiveMin'
   | 'highConfidenceThreshold'
 
+/** The dimension/area a threshold tunes — used to group the Advanced UI by the
+ *  user's mental model (the verdict's own structure) instead of one flat list. */
+export type KnobGroup = 'provenance' | 'governance' | 'release' | 'responsiveness' | 'confidence'
+
+export const KNOB_GROUPS: { key: KnobGroup; label: string; why: string }[] = [
+  { key: 'provenance', label: 'Provenance', why: 'Origin, age, and standing.' },
+  { key: 'governance', label: 'Governance', why: 'How distributed maintenance is.' },
+  { key: 'release', label: 'Release discipline', why: 'Published-release cadence.' },
+  { key: 'responsiveness', label: 'Responsiveness', why: 'Recent issue / PR activity.' },
+  { key: 'confidence', label: 'Confidence', why: 'How strongly the verdict is held — never changes the verdict itself.' },
+]
+
 export interface NumericKnob {
   key: NumericKey
   label: string
@@ -29,6 +41,13 @@ export interface NumericKnob {
   max: number
   /** Input step; integers default to 1. `govDominantShare` is a fraction. */
   step: number
+  /** Which Advanced group this dial lives under. */
+  group: KnobGroup
+  /** Unit suffix shown next to the value (e.g. "days", "people", "" for a share). */
+  unit: string
+  /** Does raising the value make the tool MORE conservative? Drives the
+   *  lenient⇄strict orientation + the "↑ raises the bar" hint. */
+  higherIsStricter: boolean
 }
 
 /** Ordered for display, grouped loosely by dimension. Bounds are deliberately
@@ -37,75 +56,57 @@ export interface NumericKnob {
 export const NUMERIC_KNOBS: NumericKnob[] = [
   {
     key: 'veryNewDays',
-    label: 'Very-new window (days)',
+    label: 'Very-new window',
     why: 'A repo younger than this reads as "very new" — a low-evidence signal, and one input to the manufactured-credibility guard.',
-    min: 1,
-    max: 365,
-    step: 1,
+    min: 1, max: 365, step: 1, group: 'provenance', unit: 'days', higherIsStricter: true,
   },
   {
     key: 'establishedDays',
-    label: 'Established age (days)',
+    label: 'Established age',
     why: 'A repo older than this counts as "established" — a provenance strength that helps it clear the gate to STRONG.',
-    min: 30,
-    max: 3650,
-    step: 1,
+    min: 30, max: 3650, step: 1, group: 'provenance', unit: 'days', higherIsStricter: true,
   },
   {
     key: 'dormantDays',
-    label: 'Dormancy window (days)',
+    label: 'Dormancy window',
     why: 'No push within this window reads as "dormant". Contextual only — dormancy never triggers caution on its own.',
-    min: 90,
-    max: 3650,
-    step: 1,
-  },
-  {
-    key: 'releaseRecentDays',
-    label: 'Recent-release window (days)',
-    why: 'A published release within this window reads as active release discipline (an additive lift toward STRONG).',
-    min: 30,
-    max: 1825,
-    step: 1,
+    min: 90, max: 3650, step: 1, group: 'provenance', unit: 'days', higherIsStricter: false,
   },
   {
     key: 'govDistributedMin',
-    label: 'Distributed-maintenance minimum (people)',
+    label: 'Distributed-maintenance minimum',
     why: 'This many distinct contributors, none dominating, reads as distributed maintenance rather than a one-person project.',
-    min: 1,
-    max: 50,
-    step: 1,
+    min: 1, max: 50, step: 1, group: 'governance', unit: 'people', higherIsStricter: true,
   },
   {
     key: 'govDominantShare',
     label: 'Dominant-contributor share',
     why: 'A single contributor at or above this fraction of observed commits reads as bus-factor-1.',
-    min: 0.5,
-    max: 1,
-    step: 0.05,
+    min: 0.5, max: 1, step: 0.05, group: 'governance', unit: '', higherIsStricter: false,
+  },
+  {
+    key: 'releaseRecentDays',
+    label: 'Recent-release window',
+    why: 'A published release within this window reads as active release discipline (a lift toward STRONG).',
+    min: 30, max: 1825, step: 1, group: 'release', unit: 'days', higherIsStricter: false,
   },
   {
     key: 'responsiveRecentDays',
-    label: 'Recent-activity window (days)',
+    label: 'Recent-activity window',
     why: 'A closed issue or PR within this window counts as recent maintainer activity.',
-    min: 7,
-    max: 730,
-    step: 1,
+    min: 7, max: 730, step: 1, group: 'responsiveness', unit: 'days', higherIsStricter: false,
   },
   {
     key: 'responsiveActiveMin',
-    label: 'Active-triage minimum (closures)',
-    why: 'This many recent closures (issues + PRs) reads as active triage (an additive lift toward STRONG).',
-    min: 1,
-    max: 100,
-    step: 1,
+    label: 'Active-triage minimum',
+    why: 'This many recent closures (issues + PRs) reads as active triage (a lift toward STRONG).',
+    min: 1, max: 100, step: 1, group: 'responsiveness', unit: 'closures', higherIsStricter: true,
   },
   {
     key: 'highConfidenceThreshold',
-    label: 'High-confidence breadth (dimensions)',
-    why: 'Confidence is breadth of evidence: this many evidenced dimensions reads high; one fewer reads medium. It never changes the verdict, only how strongly it is held.',
-    min: 1,
-    max: 6,
-    step: 1,
+    label: 'High-confidence breadth',
+    why: 'This many evidenced dimensions reads high confidence; one fewer reads medium. Never changes the verdict, only how strongly it is held.',
+    min: 1, max: 6, step: 1, group: 'confidence', unit: 'dimensions', higherIsStricter: true,
   },
 ]
 
@@ -180,4 +181,13 @@ export const DEFAULT_ADDITIVE: DimensionKey[] = DEFAULT_SCORING_CONFIG.additiveD
  *  default — i.e. the user has removed a dimension's ability to demote. */
 export function additiveWeakens(selected: DimensionKey[]): boolean {
   return selected.some((d) => !DEFAULT_ADDITIVE.includes(d))
+}
+
+/** Plain-language role of a dimension, given whether it's additive (lift-only) or
+ *  core (can also lower the verdict) — replaces the internal "additive/core"
+ *  vocabulary in the settings UI. */
+export function dimensionRole(isAdditive: boolean): { label: string; impact: string } {
+  return isAdditive
+    ? { label: 'Lift only', impact: 'can raise the verdict toward strong, but never pull it down' }
+    : { label: 'Can lower', impact: 'a weak result here can pull the verdict down' }
 }
