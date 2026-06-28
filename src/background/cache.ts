@@ -6,6 +6,12 @@ import { CACHE_TTL_MS, SCORE_VERSION } from '../engine/config'
 // score_version, AND a hash of the active scoring config — so a scoring-rules bump
 // (new SCORE_VERSION) OR a config value change naturally invalidates prior entries:
 // old keys are simply never read again. `configHash` comes from `hashConfig(config)`.
+// A single cache entry per repo holds the current verdict. The manual
+// package-source check writes its merged (possibly caution-escalated) result
+// back into this same entry, so a re-visit is "remembered" and the card,
+// popup, and watchlist never disagree. A forced refresh re-derives the base
+// verdict here (the manual check must be re-run to re-augment) — one source of
+// truth, no stale shadow.
 export function cacheKey(target: SupportedRepo, configHash: string): string {
   return `analysis:${target.owner}/${target.repo}:${SCORE_VERSION}:${configHash}`
 }

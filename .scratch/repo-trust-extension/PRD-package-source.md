@@ -1,6 +1,8 @@
 # PRD — Package source (Supply-chain v1: canonical package↔repo linkage)
 
-Status: ready-for-agent
+Status: ✅ implemented (branch `feat/package-source`)
+
+> Landed: `checkPackageSource` + `parseGithubRepo` + the npm `RegistryAdapter` (`packageSource.ts`, `registryNpm.ts`); folded into `analyzeRepo` as an always-additive 7th contribution; manual `check-package-source` worker message + a separate "remembered" cache; `PackageSourceAction` button on card + popup with headline escalation; transfer-safe via GitHub redirect resolve. `SCORE_VERSION` `0.8.0`, manifest `0.2.9`, CLAUDE.md caution rule updated. 185 tests (pure seam + npm adapter + analyzeRepo integration; is-number-never-caution and the draft-js transfer regression both asserted). Open: in-browser dogfood; the mismatch→caution path uses a synthetic fixture (no live non-fork impersonation found).
 
 > Goal: add a **manual, on-demand** 7th dimension — **"Package source"** — that answers the single highest-value pre-install question the tool currently punts on: *is this repo the genuine source of the package it claims to publish, or an impersonation/typosquat?* v1 verifies **linkage only** (one npm registry lookup, transfer-safe), behind a registry-agnostic seam. It does **not** assess malware, known vulnerabilities, or dependency risk — those stay explicitly "Not checked here."
 
@@ -49,7 +51,7 @@ The result is **cached** so a re-visit shows it without re-clicking. The broad "
 ## Implementation Decisions
 
 ### The linkage flow (v1, npm)
-- **Discovery:** root `package.json` only via the GitHub contents API. `private: true`, a `workspaces` field, missing file, or missing `name` → `no-package` (honest monorepo message when `workspaces`/`private` present). Monorepo workspace-walking is explicitly v2.
+- **Discovery:** root `package.json` only via the GitHub contents API. `private: true`, a `workspaces` field, missing file, or missing `name` → `no-package`. Copy matches the reason: `workspaces` → "looks like a monorepo"; `private` → "root package.json is private" (a private root isn't necessarily a monorepo). Monorepo workspace-walking is explicitly v2.
 - **Registry lookup:** one unauthenticated `GET registry.npmjs.org/<name>` (scoped names URL-encoded). 404 → `unpublished`; network/5xx → `unverifiable`; missing/garbage `repository` → `unverifiable`. None of these fire caution.
 - **Transfer-safe comparison:** normalize the registry `repository` URL to `owner/repo`, then **resolve it through the GitHub API** and compare the resolved current `full_name` (lowercased) to the viewed repo. (Validated: `facebook/draft-js` resolves to `facebookarchive/draft-js`, eliminating the transfer false-positive.)
 - **Verdict mapping:** resolved == viewed → `verified` (additive lift, positive signal). `fork === false` and resolved != viewed (both live) → `confirmed mismatch` (high-severity flag → caution). `fork === true` and resolved != viewed → `fork` (neutral note). Everything else → no evidence.

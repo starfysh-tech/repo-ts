@@ -76,6 +76,9 @@ export const DIM_TITLE: Record<DimensionKey, string> = {
   release: 'Release discipline',
   governance: 'Governance',
   responsiveness: 'Responsiveness',
+  // Precise like "Security docs": v1 checks only that the repo is the canonical
+  // source of the package it declares — never malware/vuln/dependency posture.
+  package_source: 'Package source',
 }
 
 const joinWords = (xs: string[]): string =>
@@ -90,7 +93,11 @@ export function verdictSummary(result: AnalysisResult): string {
   const high = (result.flags ?? []).find((f) => f.severity === 'high')
   if (high) return `${high.label}.`
 
-  const dims = result.dimension_results ?? []
+  // Package source is a manual, on-demand check — exclude it from the auto-six
+  // takeaway so a fork ('mixed') or no-package ('unknown') result can't inject a
+  // phantom weakness, and a verified result doesn't double-count. A confirmed
+  // mismatch still surfaces above via its high-severity flag.
+  const dims = (result.dimension_results ?? []).filter((d) => d.dimension_key !== 'package_source')
   const titleOf = (d: DimensionResult) => (DIM_TITLE[d.dimension_key] ?? d.dimension_key ?? '').toLowerCase()
   const strong = dims.filter((d) => d.dimension_state === 'strong').map(titleOf)
   const mixed = dims.filter((d) => d.dimension_state === 'mixed').map(titleOf)

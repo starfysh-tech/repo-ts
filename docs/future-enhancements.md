@@ -6,7 +6,7 @@ Scope deliberately cut from the Phase 1 client-only PoC during the design grilli
 The PoC scores 3 of 7 dimensions. These are shown in the drawer as "not evaluated in this version":
 - **Release discipline** — release cadence, changelog quality, signed/attested releases. Needs the `/releases` call (extra rate-limit cost).
 - **Governance** — maintainer concentration, CODEOWNERS, governance docs. Needs `/contributors` (extra call) and careful thresholds per ecosystem.
-- **Supply-chain** — package-registry linkage, package/repo mismatch, dependency churn, external advisories. Requires enrichment / external feeds.
+- **Supply-chain** — v1 **shipped** as the manual **"Package source"** dimension (canonical package/repo linkage, npm, transfer-safe; confirmed mismatch → caution). Still deferred: dependency churn, known-vuln/advisory feeds, malware, SBOM/attestation — these need enrichment / external feeds and stay under "Not checked here".
 - **Responsiveness** — issue triage latency, PR review patterns, stale-backlog ratios. Requires many calls and time-series analysis.
 
 ## Deferred UI surfaces & features

@@ -166,6 +166,9 @@ export const DIMENSION_LABELS: Record<DimensionKey, string> = {
   release: 'Release discipline',
   governance: 'Governance',
   responsiveness: 'Responsiveness',
+  // Not a user-configurable additive knob (always-additive, manual); listed only
+  // to satisfy the DimensionKey record. The settings UI iterates DIMENSION_KEYS.
+  package_source: 'Package source',
 }
 
 /** Additive by default — used to decide whether the current additive selection

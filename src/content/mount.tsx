@@ -6,6 +6,7 @@ import { trustDetailsStyles } from '../shared/TrustDetails'
 import { scopeNoteStyles } from '../shared/ScopeNote'
 import { caveatsStyles } from '../shared/Caveats'
 import { headlineStyles } from '../shared/Headline'
+import { packageSourceActionStyles } from '../shared/PackageSourceAction'
 
 const HOST_ID = 'repo-trust-root'
 
@@ -54,6 +55,7 @@ const STYLES = `
   ${trustDetailsStyles}
   ${scopeNoteStyles}
   ${caveatsStyles}
+  ${packageSourceActionStyles}
 `
 
 // Single mounted host for the in-page UI. Tracking the host and its Preact

@@ -27,7 +27,16 @@ import { scoreTransparency } from './transparency'
  * failure modes map to distinct non-verdict outcomes so a hiccup is never shown
  * as a trust judgement.
  */
-export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Promise<AnalysisOutcome> {
+export async function analyzeRepo(
+  deps: AnalyzeDeps,
+  target: SupportedRepo,
+  // The manual "Package source" check, when the user has run it. It's computed
+  // outside this path (a separate fetch lifecycle) and folded in here as a 7th,
+  // always-additive contribution so the verdict is derived in one place: a strong
+  // (verified) result lifts the majority, and a confirmed-mismatch high-severity
+  // flag escalates the rollup to `caution` exactly like `archived`.
+  packageSource?: DimensionContribution,
+): Promise<AnalysisOutcome> {
   const config = deps.config ?? DEFAULT_SCORING_CONFIG
 
   const repoRes = await deps.fetchRepo(target)
@@ -80,6 +89,10 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
     scoreResponsiveness(issues, pulls, target, deps.now, config),
   ].map((c) => ({ ...c, additive: additiveSet.has(c.dimension.dimension_key) }))
 
+  // Fold in the manual package-source check (already additive). Appended after the
+  // config-driven additive map so it stays additive regardless of config.
+  if (packageSource) contributions.push(packageSource)
+
   const flags: Flag[] = contributions.flatMap((c) => c.flags)
   // Cross-dimension caveat: a very-new repo already showing every maturity signal
   // (release + governance + responsiveness all strong) is a manufactured-trust tell.
@@ -90,7 +103,12 @@ export async function analyzeRepo(deps: AnalyzeDeps, target: SupportedRepo): Pro
 
   const positives = contributions.flatMap((c) => c.positives)
   const evidenced = contributions.filter((c) => c.hasEvidence)
-  const confidence = deriveConfidence(evidenced.length, config.highConfidenceThreshold)
+  // Confidence is the breadth of the AUTO dimensions only: the manual
+  // package-source check lifts the strong tally and can fire caution, but a user
+  // action must not move how confidently the verdict is held (a sparse repo
+  // shouldn't leave "insufficient evidence" just because linkage was checked).
+  const autoEvidenced = evidenced.filter((c) => c.dimension.dimension_key !== 'package_source')
+  const confidence = deriveConfidence(autoEvidenced.length, config.highConfidenceThreshold)
   const trustState = deriveTrustState(evidenced, flags, confidence, config)
 
   const result: AnalysisResult = {
@@ -137,9 +155,10 @@ function errorOutcome(fetched: Extract<RepoFetchResult, { ok: false }>): Analysi
   }
 }
 
-/** Confidence = breadth of evidence across the four dimensions: ≥threshold
+/** Confidence = breadth of evidence across the auto dimensions: ≥threshold
  *  evidenced → high, one fewer → medium, ≤1 → low. A sparse repo reads
- *  low-confidence (limited evidence), not low-trust. */
+ *  low-confidence (limited evidence), not low-trust. (The manual package-source
+ *  dimension is excluded by the caller — a user action shouldn't move confidence.) */
 function deriveConfidence(evidencedCount: number, highThreshold: number): ConfidenceState {
   if (evidencedCount >= highThreshold) return 'high'
   if (evidencedCount >= highThreshold - 1) return 'medium'
@@ -148,7 +167,7 @@ function deriveConfidence(evidencedCount: number, highThreshold: number): Confid
 
 /** Deterministic top-level rollup (PRD order); `evidenced` is the set of
  *  dimensions that produced evidence:
- *  1. any high-severity flag (archived) → caution
+ *  1. any high-severity flag (archived, or a confirmed package-source mismatch) → caution
  *  2. low confidence → insufficient_evidence
  *  3. provenance strong AND majority of the evidenced CORE dimensions strong AND no
  *     negative flags → strong_signals

@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'preact/hooks'
 import type { SupportedRepo } from './parseRepoContext'
 import type { AnalysisResult } from '../engine/types'
 import { recencyLabel } from './recency'
 import { useWatchToggle } from '../shared/useWatchToggle'
 import { ConfidenceMeter } from '../shared/ConfidenceMeter'
+import { PackageSourceAction } from '../shared/PackageSourceAction'
 import { TrustDetails } from '../shared/TrustDetails'
 import { ScopeNote } from '../shared/ScopeNote'
 import { Caveats } from '../shared/Caveats'
@@ -59,7 +61,12 @@ function renderBody(state: CardState) {
   }
 }
 
-function Result({ result, target }: { result: AnalysisResult; target: SupportedRepo }) {
+function Result({ result: initial, target }: { result: AnalysisResult; target: SupportedRepo }) {
+  // Hold the displayed result locally so the manual package-source check can swap
+  // in the merged (possibly caution-escalated) verdict. Re-sync if the underlying
+  // analysis changes (SPA nav to another repo reuses this component).
+  const [result, setResult] = useState(initial)
+  useEffect(() => setResult(initial), [initial])
   const display = TRUST_DISPLAY[result.trust_state]
   const { watched, pending, toggle: toggleWatch } = useWatchToggle(target, result)
 
@@ -84,6 +91,7 @@ function Result({ result, target }: { result: AnalysisResult; target: SupportedR
       <Caveats flags={result.flags} />
       <ScopeNote />
       <p class="card__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
+      <PackageSourceAction target={target} result={result} onResult={setResult} />
       <TrustDetails result={result} />
     </div>
   )
