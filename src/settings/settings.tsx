@@ -15,11 +15,14 @@ import { DIMENSION_KEYS, SCORING_PRESET_KEYS, type ScoringConfig, type ScoringPr
 import type { DimensionKey } from '../engine/types'
 import {
   additiveWeakens,
+  dimensionRole,
   DIMENSION_LABELS,
   GUARD_SENSITIVITY_OPTIONS,
   GUARD_SEVERITY_OPTIONS,
+  KNOB_GROUPS,
   NUMERIC_KNOBS,
   PRESET_COPY,
+  type NumericKnob,
 } from '../shared/scoringKnobs'
 
 const STYLES = `
@@ -68,38 +71,85 @@ const STYLES = `
   .sc__adv > summary {
     cursor: pointer; font-size: 13px; font-weight: 600; list-style: revert;
   }
-  .sc__adv-intro { font-size: 12px; color: ${SURFACE_MUTED}; margin: 8px 0 14px; line-height: 1.5; }
-  .sc__knob { margin: 0 0 16px; }
-  .sc__knob-head { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
-  .sc__knob-label { font-size: 13px; font-weight: 600; }
-  .sc__knob input[type=number] { width: 96px; flex: 0 0 auto; text-align: right; }
+  .sc__adv-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 8px 0 14px; }
+  .sc__adv-intro { font-size: 12px; color: ${SURFACE_MUTED}; line-height: 1.5; margin: 0; }
+  .sc__reset-all {
+    font-size: 12px; padding: 5px 10px; border: 1px solid rgba(0,0,0,0.2); border-radius: 6px;
+    background: transparent; color: inherit; cursor: pointer; white-space: nowrap; flex: 0 0 auto;
+  }
+  .sc__reset-all:disabled { opacity: 0.5; cursor: default; }
   .sc__why { font-size: 12px; color: ${SURFACE_MUTED}; line-height: 1.45; margin: 4px 0 0; }
   .sc__select {
     font-size: 13px; padding: 5px 8px; border: 1px solid rgba(0,0,0,0.2);
     border-radius: 6px; background: transparent; color: inherit;
   }
   .sc__check { display: flex; gap: 8px; align-items: center; font-size: 13px; }
-  .sc__dims { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin-top: 6px; }
-  .sc__group { margin: 0 0 18px; }
-  .sc__group h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: ${SURFACE_MUTED}; margin: 0 0 10px; }
-  .sc__warn { font-size: 12px; color: #9a6700; margin: 4px 0 0; line-height: 1.45; }
+  .sc__warn { font-size: 12px; color: #9a6700; margin: 6px 0 0; line-height: 1.45; }
   .sc__warn--loud {
     color: #cf222e; font-weight: 600; background: rgba(207,34,46,0.07);
     border: 1px solid rgba(207,34,46,0.3); border-radius: 6px; padding: 8px 10px; margin-top: 6px;
   }
-  .sc__reset { margin-top: 8px; }
+
+  /* Collapsible threshold groups */
+  .sc__grp { border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; margin: 0 0 10px; overflow: hidden; }
+  .sc__grp-sum { cursor: pointer; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; list-style: revert; }
+  .sc__grp[open] .sc__grp-sum { background: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .sc__grp-name { font-size: 13px; font-weight: 600; }
+  .sc__grp-why { font-size: 11px; color: ${SURFACE_MUTED}; line-height: 1.4; }
+  .sc__policy { padding: 12px; border-top: 1px solid rgba(0,0,0,0.05); }
+  .sc__field { display: flex; flex-direction: column; gap: 4px; margin: 0 0 6px; }
+  .sc__field-label { font-size: 13px; font-weight: 600; }
+  .sc__field .sc__select { width: 100%; box-sizing: border-box; }
+
+  /* One threshold dial (slider + number) */
+  .kn { padding: 12px; }
+  .kn + .kn { border-top: 1px solid rgba(0,0,0,0.05); }
+  .kn--custom { background: rgba(9,105,218,0.05); }
+  .kn__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .kn__label { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .kn__dot { width: 7px; height: 7px; border-radius: 50%; background: #0969da; display: inline-block; }
+  .kn__reset {
+    font-size: 11px; padding: 2px 7px; border: 1px solid rgba(0,0,0,0.2); border-radius: 5px;
+    background: transparent; color: inherit; cursor: pointer;
+  }
+  .kn__controls { display: flex; align-items: center; gap: 10px; margin: 9px 0 3px; }
+  .kn__slider { flex: 1; min-width: 0; accent-color: #0969da; }
+  .kn__num {
+    width: 70px; flex: 0 0 auto; text-align: right; font-size: 13px; padding: 5px 8px;
+    border: 1px solid rgba(0,0,0,0.25); border-radius: 6px; background: transparent; color: inherit;
+  }
+  .kn__unit { font-size: 12px; color: ${SURFACE_MUTED}; min-width: 46px; }
+  .kn__scale { display: flex; justify-content: space-between; font-size: 10px; color: ${SURFACE_MUTED}; }
+  .kn__dir { font-style: italic; }
+
+  /* Dimension roles (additive reframed) */
+  .sc__role { display: flex; align-items: center; gap: 10px; padding: 10px 12px; flex-wrap: wrap; }
+  .sc__role + .sc__role { border-top: 1px solid rgba(0,0,0,0.05); }
+  .sc__role-name { font-size: 13px; font-weight: 600; min-width: 112px; flex: 0 0 auto; }
+  .sc__role-impact { font-size: 11px; color: ${SURFACE_MUTED}; line-height: 1.4; flex: 1 1 100%; order: 3; margin: 0; }
+  .sc__seg { display: inline-flex; border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; overflow: hidden; }
+  .sc__seg-btn { font-size: 12px; padding: 4px 11px; border: none; background: transparent; color: inherit; cursor: pointer; }
+  .sc__seg-btn--on { background: #0969da; color: #fff; }
 
   @media (prefers-color-scheme: dark) {
     body { background: #0d1117; color: #e6edf3; }
-    .st__intro, .st__status, .st__guidance, .sc__sub, .sc__preset-why, .sc__adv-intro, .sc__why, .sc__group h3 { color: #9198a1; }
+    .st__intro, .st__status, .st__guidance, .sc__sub, .sc__preset-why, .sc__adv-intro, .sc__why,
+    .sc__grp-why, .kn__unit, .kn__scale, .sc__role-impact { color: #9198a1; }
     .st__card { background: #161b22; border-color: rgba(255,255,255,0.1); }
-    .st input, .st button, .sc__select { border-color: rgba(255,255,255,0.24); }
+    .st input, .st button, .sc__select, .kn__num, .kn__reset, .sc__seg, .sc__reset-all { border-color: rgba(255,255,255,0.24); }
     .st__guidance a { color: #4493f8; }
     .sc__preset { border-color: rgba(255,255,255,0.16); }
     .sc__preset--on { border-color: #4493f8; box-shadow: inset 0 0 0 1px #4493f8; }
     .sc__adv { border-top-color: rgba(255,255,255,0.1); }
     .sc__customized, .sc__warn { color: #d4a72c; }
     .sc__warn--loud { color: #ff7b72; background: rgba(255,123,114,0.1); border-color: rgba(255,123,114,0.35); }
+    .sc__grp { border-color: rgba(255,255,255,0.1); }
+    .sc__grp[open] .sc__grp-sum { background: rgba(255,255,255,0.03); border-bottom-color: rgba(255,255,255,0.08); }
+    .kn + .kn, .sc__role + .sc__role, .sc__policy { border-top-color: rgba(255,255,255,0.07); }
+    .kn--custom { background: rgba(68,147,248,0.09); }
+    .kn__dot, .sc__seg-btn--on { background: #1f6feb; }
+    .sc__seg-btn--on { color: #fff; }
+    .kn__slider { accent-color: #4493f8; }
   }
 `
 
@@ -194,6 +244,76 @@ function PatCard() {
   )
 }
 
+// One threshold dial: a slider (affordance + range + direction) paired with a
+// precise number field, a value/unit readout, a "changed from default" dot, and a
+// per-dial reset. The slider makes the row obviously interactive; the number field
+// allows exact entry. Both commit the clamped value.
+function KnobRow({
+  knob,
+  value,
+  baseline,
+  onCommit,
+  onReset,
+}: {
+  knob: NumericKnob
+  value: number
+  baseline: number
+  onCommit: (v: number) => void
+  onReset: () => void
+}) {
+  const custom = value !== baseline
+  const id = `knob-${knob.key}`
+  const clamp = (v: number) => Math.min(knob.max, Math.max(knob.min, v))
+  return (
+    <div class={`kn${custom ? ' kn--custom' : ''}`}>
+      <div class="kn__head">
+        <label class="kn__label" for={id}>
+          {knob.label}
+          {custom && <span class="kn__dot" title="Changed from this preset's default" aria-hidden="true" />}
+        </label>
+        {custom && (
+          <button type="button" class="kn__reset" title={`Reset to ${baseline}`} onClick={onReset}>
+            ↺ reset
+          </button>
+        )}
+      </div>
+      <div class="kn__controls">
+        <input
+          class="kn__slider"
+          id={id}
+          type="range"
+          min={knob.min}
+          max={knob.max}
+          step={knob.step}
+          value={value}
+          onChange={(e) => onCommit(clamp((e.target as HTMLInputElement).valueAsNumber))}
+        />
+        <input
+          class="kn__num"
+          type="number"
+          aria-label={`${knob.label} value`}
+          min={knob.min}
+          max={knob.max}
+          step={knob.step}
+          value={value}
+          onChange={(e) => {
+            const el = e.target as HTMLInputElement
+            if (el.value.trim() === '') return onReset()
+            if (Number.isFinite(el.valueAsNumber)) onCommit(clamp(el.valueAsNumber))
+          }}
+        />
+        {knob.unit && <span class="kn__unit">{knob.unit}</span>}
+      </div>
+      <div class="kn__scale">
+        <span>{knob.min}</span>
+        <span class="kn__dir">{knob.higherIsStricter ? 'raise → stricter' : 'raise → looser'}</span>
+        <span>{knob.max}</span>
+      </div>
+      <p class="sc__why">{knob.why}</p>
+    </div>
+  )
+}
+
 // ── Scoring card ────────────────────────────────────────────────────────────
 function ScoringCard() {
   // The stored stance, kept verbatim so we can show "customized" and so a preset
@@ -220,6 +340,9 @@ function ScoringCard() {
     () => resolveScoringConfig({ scoringPreset: preset, scoringOverrides: overrides }),
     [preset, overrides],
   )
+  // The chosen preset's values with NO overrides — what each dial reverts to, and
+  // the baseline a "changed from default" diff highlights against.
+  const baseline = useMemo(() => resolveScoringConfig({ scoringPreset: preset }), [preset])
   const hasOverrides = Object.keys(overrides).length > 0
 
   const choosePreset = async (p: ScoringPreset) => {
@@ -304,80 +427,76 @@ function ScoringCard() {
       )}
 
       <details class="sc__adv">
-        <summary>Advanced — every dial</summary>
-        <p class="sc__adv-intro">
-          Each change saves immediately and applies to the next analysis. Values are bounded; an
-          out-of-range entry is clamped. Use <strong>Reset to defaults</strong> to return to
-          Balanced.
-        </p>
-
-        <div class="sc__group">
-          <h3>Thresholds</h3>
-          {NUMERIC_KNOBS.map((k) => (
-            <div key={k.key} class="sc__knob">
-              <div class="sc__knob-head">
-                <label class="sc__knob-label" for={`knob-${k.key}`}>
-                  {k.label}
-                </label>
-                <input
-                  id={`knob-${k.key}`}
-                  type="number"
-                  min={k.min}
-                  max={k.max}
-                  step={k.step}
-                  value={config[k.key]}
-                  onChange={(e) => {
-                    const el = e.target as HTMLInputElement
-                    // An emptied field reverts this one knob to the preset baseline.
-                    if (el.value.trim() === '') {
-                      void clearKnob(k.key)
-                      return
-                    }
-                    const v = el.valueAsNumber
-                    // Clamp before storing so the saved override matches the
-                    // displayed (clamped) value — no stored-vs-effective drift.
-                    if (Number.isFinite(v)) {
-                      void override({ [k.key]: Math.min(k.max, Math.max(k.min, v)) })
-                    }
-                  }}
-                />
-              </div>
-              <p class="sc__why">{k.why}</p>
-            </div>
-          ))}
+        <summary>Advanced — tune individual dials</summary>
+        <div class="sc__adv-top">
+          <p class="sc__adv-intro">
+            Grouped by what each dial affects. Changes save immediately. A changed value shows a dot
+            and its own reset.
+          </p>
+          <button
+            type="button"
+            class="sc__reset-all"
+            onClick={() => void reset()}
+            disabled={!hasOverrides && preset === 'balanced'}
+          >
+            ↺ Reset all to defaults
+          </button>
         </div>
 
-        <div class="sc__group">
-          <h3>Policy</h3>
-
-          <div class="sc__knob">
-            <label class="sc__check">
-              <input
-                type="checkbox"
-                checked={config.provenanceGate}
-                onChange={(e) => void override({ provenanceGate: (e.target as HTMLInputElement).checked })}
+        {/* Threshold groups, one collapsible section per area (the verdict's own
+            structure), so the user opens the dimension they care about. */}
+        {KNOB_GROUPS.map((g) => (
+          <details key={g.key} class="sc__grp" open>
+            <summary class="sc__grp-sum">
+              <span class="sc__grp-name">{g.label}</span>
+              <span class="sc__grp-why">{g.why}</span>
+            </summary>
+            {NUMERIC_KNOBS.filter((k) => k.group === g.key).map((k) => (
+              <KnobRow
+                key={k.key}
+                knob={k}
+                value={config[k.key]}
+                baseline={baseline[k.key]}
+                onCommit={(v) => void override({ [k.key]: v })}
+                onReset={() => void clearKnob(k.key)}
               />
-              Require strong provenance to reach “strong signals”
-            </label>
-            <p class="sc__why">
-              On, a newly-created, dormant, or unlicensed-but-active repo can’t earn the top verdict
-              on activity alone.
-            </p>
-            {gateOff && (
-              <p class="sc__warn">
-                ⚠ Off — a repo can read “strong” on activity alone, without established provenance.
-                This weakens the conservative guarantee.
-              </p>
+            ))}
+            {/* The provenance gate is a provenance-area policy, so it lives here. */}
+            {g.key === 'provenance' && (
+              <div class="sc__policy">
+                <label class="sc__check">
+                  <input
+                    type="checkbox"
+                    checked={config.provenanceGate}
+                    onChange={(e) => void override({ provenanceGate: (e.target as HTMLInputElement).checked })}
+                  />
+                  Require strong provenance to reach “strong signals”
+                </label>
+                <p class="sc__why">
+                  On, a newly-created, dormant, or unlicensed-but-active repo can’t earn the top
+                  verdict on activity alone.
+                </p>
+                {gateOff && (
+                  <p class="sc__warn">
+                    ⚠ Off — a repo can read “strong” on activity alone, without established
+                    provenance. This weakens the conservative guarantee.
+                  </p>
+                )}
+              </div>
             )}
-          </div>
+          </details>
+        ))}
 
-          <div class="sc__knob">
-            <div class="sc__knob-head">
-              <label class="sc__knob-label" for="knob-guard-sens">
-                Manufactured-credibility guard
-              </label>
+        {/* Manufactured-credibility guard */}
+        <details class="sc__grp" open>
+          <summary class="sc__grp-sum">
+            <span class="sc__grp-name">Manufactured-credibility guard</span>
+            <span class="sc__grp-why">Flags a very-new repo that already looks fully active.</span>
+          </summary>
+          <div class="sc__policy">
+            <label class="sc__field">
+              <span class="sc__field-label">Fires when this many maturity signals look strong</span>
               <select
-                id="knob-guard-sens"
                 class="sc__select"
                 value={config.manufacturedGuard.sensitivity}
                 onChange={(e) =>
@@ -393,26 +512,16 @@ function ScoringCard() {
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
             <p class="sc__why">
-              Flags the “very new yet already fully active” pattern (a fabricated track record). How
-              many of the three maturity signals — release, governance, responsiveness — must look
-              strong on a very-new repo before it fires.
+              The pattern of a fabricated track record: a very-new repo already strong on release,
+              governance, and responsiveness.
             </p>
-            {guardOff && (
-              <p class="sc__warn">
-                ⚠ Off — the manufactured-credibility pattern is not flagged at all.
-              </p>
-            )}
-          </div>
+            {guardOff && <p class="sc__warn">⚠ Off — the manufactured-credibility pattern is not flagged at all.</p>}
 
-          <div class="sc__knob">
-            <div class="sc__knob-head">
-              <label class="sc__knob-label" for="knob-guard-sev">
-                Guard severity
-              </label>
+            <label class="sc__field">
+              <span class="sc__field-label">How loudly it speaks when it fires</span>
               <select
-                id="knob-guard-sev"
                 class="sc__select"
                 value={config.manufacturedGuard.severity}
                 onChange={(e) =>
@@ -428,8 +537,7 @@ function ScoringCard() {
                   </option>
                 ))}
               </select>
-            </div>
-            <p class="sc__why">How loudly the guard speaks when it fires.</p>
+            </label>
             {guardCaution && (
               <p class="sc__warn sc__warn--loud">
                 🔴 “Caution” overrides this tool’s rule that caution fires only on a high-severity
@@ -438,37 +546,48 @@ function ScoringCard() {
               </p>
             )}
           </div>
+        </details>
 
-          <div class="sc__knob">
-            <span class="sc__knob-label">Additive dimensions</span>
-            <p class="sc__why">
-              An additive dimension can lift the verdict toward strong but never demote it. The rest
-              are “core” and can pull a verdict down. Defaults: release and responsiveness.
+        {/* Dimension roles — the old "additive vs core" reframed as plain outcomes. */}
+        <details class="sc__grp" open>
+          <summary class="sc__grp-sum">
+            <span class="sc__grp-name">What each dimension can do</span>
+            <span class="sc__grp-why">Whether a weak result in an area can pull the verdict down.</span>
+          </summary>
+          {DIMENSION_KEYS.map((dim) => {
+            const liftOnly = config.additiveDimensions.includes(dim)
+            return (
+              <div key={dim} class="sc__role">
+                <span class="sc__role-name">{DIMENSION_LABELS[dim]}</span>
+                <div class="sc__seg" role="group" aria-label={`${DIMENSION_LABELS[dim]} role`}>
+                  <button
+                    type="button"
+                    class={`sc__seg-btn${!liftOnly ? ' sc__seg-btn--on' : ''}`}
+                    aria-pressed={!liftOnly}
+                    onClick={() => void toggleAdditive(dim, false)}
+                  >
+                    Can lower
+                  </button>
+                  <button
+                    type="button"
+                    class={`sc__seg-btn${liftOnly ? ' sc__seg-btn--on' : ''}`}
+                    aria-pressed={liftOnly}
+                    onClick={() => void toggleAdditive(dim, true)}
+                  >
+                    Lift only
+                  </button>
+                </div>
+                <span class="sc__role-impact">{dimensionRole(liftOnly).impact}</span>
+              </div>
+            )
+          })}
+          {dimsWeaken && (
+            <p class="sc__warn">
+              ⚠ A dimension that can lower a verdict by default is now lift-only — it can no longer
+              pull a verdict down. This weakens the conservative guarantee.
             </p>
-            <div class="sc__dims">
-              {DIMENSION_KEYS.map((dim) => (
-                <label key={dim} class="sc__check">
-                  <input
-                    type="checkbox"
-                    checked={config.additiveDimensions.includes(dim)}
-                    onChange={(e) => void toggleAdditive(dim, (e.target as HTMLInputElement).checked)}
-                  />
-                  {DIMENSION_LABELS[dim]}
-                </label>
-              ))}
-            </div>
-            {dimsWeaken && (
-              <p class="sc__warn">
-                ⚠ A dimension that is core by default is now additive — it can no longer pull a
-                verdict down. This weakens the conservative guarantee.
-              </p>
-            )}
-          </div>
-        </div>
-
-        <button type="button" class="sc__reset" onClick={() => void reset()} disabled={!hasOverrides && preset === 'balanced'}>
-          Reset to defaults
-        </button>
+          )}
+        </details>
       </details>
     </div>
   )
