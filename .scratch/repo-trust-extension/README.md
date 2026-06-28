@@ -31,14 +31,15 @@ The engine now scores **6 of 7** dimensions.
 
 - **User-configurable scoring** ([`PRD-user-config.md`](./PRD-user-config.md)) — exposing every threshold and policy decision in Settings (presets + advanced). **Slice A (config seam) landed:** the engine now reads an injected `ScoringConfig` (`DEFAULT_SCORING_CONFIG` = the prior constants) threaded through every scorer, the provenance gate, the manufactured-credibility guard (sensitivity + severity now config-driven), and confidence breadth; the cache key incorporates a stable `hashConfig` so a config change invalidates stale entries. Pure refactor — every fixture verdict unchanged. **Slice B (presets) landed:** `SCORING_PRESETS` (Balanced / Cautious / Minimal) + a `resolveScoringConfig` validation seam in `settings.ts` (preset baseline + per-field-validated overrides), with the service worker resolving the active config per analysis; `is-number` stays never-`caution` under every preset. **Slice C (advanced UI) landed:** a `Scoring` card on the settings page — preset selector + an `Advanced` disclosure rendering every knob from a declarative inventory (`shared/scoringKnobs.ts`), bounded, with inline "why" + warnings on conservatism-weakening choices (a loud warning on the guard's `caution` severity, which overrides the archived-only rule). Numeric bounds-clamping now lands at the `resolveScoringConfig` seam from the same `NUMERIC_BOUNDS` the inputs use. `CACHE_TTL_MS` knob deferred (separate cache seam). Manifest `0.2.7`.
 
-Suite is **152 tests** (up from 49).
+Suite is **182 tests** (up from 49).
 
 ### What's left / next
 
 1. **Finish in-browser dogfood QA** — card + popup + settings verified by eye; not yet: the new caveat list on a manufactured-pattern repo, watchlist save/refresh/remove, SPA repo→repo nav, rate-limit/error/private/loading states.
 2. **Deferred review item** — engine should emit structured rationale segments (explicit link slots) instead of `DimensionRow` string-matching link labels against rationale prose.
 3. **Backlog** — share, cloud enrichment, Chrome Web Store packaging.
-   - **Package source (Supply-chain v1)** ([`PRD-package-source.md`](./PRD-package-source.md), `ready-for-agent`) — a manual, on-demand 7th dimension checking canonical package↔repo linkage (npm-first, behind a registry-agnostic seam). Confirmed impersonation mismatch → `caution` (a 2nd trigger alongside `archived`), made safe by fork-gating + resolving the registry URL through GitHub (transfer/rename redirects). Design validated against 10 real repos (caught the `draft-js` transfer false-positive + the monorepo private-root gap).
+
+**Package source (Supply-chain v1) — ✅ BUILT** ([`PRD-package-source.md`](./PRD-package-source.md)). A manual, on-demand 7th dimension checking canonical package↔repo linkage (npm, behind a registry-agnostic `RegistryAdapter` seam). Confirmed impersonation mismatch → `caution` (a 2nd trigger alongside `archived`), made safe by fork-gating + resolving the registry URL through GitHub (transfer/rename redirects). `SCORE_VERSION` → `0.8.0`. Remaining: in-browser dogfood of the button/escalation; the mismatch→caution path is proven only against a synthetic fixture (no live non-fork impersonation in the validation sample). Deferred to v2: monorepo `workspaces` walking, registries beyond npm.
 
 ## How issues were worked
 

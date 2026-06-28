@@ -1,6 +1,8 @@
 # PRD — Package source (Supply-chain v1: canonical package↔repo linkage)
 
-Status: ready-for-agent
+Status: ✅ implemented (branch `feat/package-source`)
+
+> Landed: `checkPackageSource` + `parseGithubRepo` + the npm `RegistryAdapter` (`packageSource.ts`, `registryNpm.ts`); folded into `analyzeRepo` as an always-additive 7th contribution; manual `check-package-source` worker message + a separate "remembered" cache; `PackageSourceAction` button on card + popup with headline escalation; transfer-safe via GitHub redirect resolve. `SCORE_VERSION` `0.8.0`, manifest `0.2.9`, CLAUDE.md caution rule updated. 182 tests (pure seam + npm adapter + analyzeRepo integration; is-number-never-caution and the draft-js transfer regression both asserted). Open: in-browser dogfood; the mismatch→caution path uses a synthetic fixture (no live non-fork impersonation found).
 
 > Goal: add a **manual, on-demand** 7th dimension — **"Package source"** — that answers the single highest-value pre-install question the tool currently punts on: *is this repo the genuine source of the package it claims to publish, or an impersonation/typosquat?* v1 verifies **linkage only** (one npm registry lookup, transfer-safe), behind a registry-agnostic seam. It does **not** assess malware, known vulnerabilities, or dependency risk — those stay explicitly "Not checked here."
 
