@@ -122,21 +122,33 @@ const STYLES = `
   .kn__scale { display: flex; justify-content: space-between; font-size: 10px; color: ${SURFACE_MUTED}; }
   .kn__dir { font-style: italic; }
 
-  /* Dimension roles (additive reframed) */
-  .sc__role { display: flex; align-items: center; gap: 10px; padding: 10px 12px; flex-wrap: wrap; }
+  /* Dimension roles (additive reframed) — a positive toggle: on = can lower */
+  .sc__role-intro { padding: 0 12px; margin: 10px 0 2px; }
+  .sc__role { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
   .sc__role + .sc__role { border-top: 1px solid rgba(0,0,0,0.05); }
-  .sc__role-name { font-size: 13px; font-weight: 600; min-width: 112px; flex: 0 0 auto; }
-  .sc__role-impact { font-size: 11px; color: ${SURFACE_MUTED}; line-height: 1.4; flex: 1 1 100%; order: 3; margin: 0; }
-  .sc__seg { display: inline-flex; border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; overflow: hidden; }
-  .sc__seg-btn { font-size: 12px; padding: 4px 11px; border: none; background: transparent; color: inherit; cursor: pointer; }
-  .sc__seg-btn--on { background: #0969da; color: #fff; }
+  .sc__role-body { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .sc__role-name { font-size: 13px; font-weight: 600; }
+  .sc__role-impact { font-size: 11px; color: ${SURFACE_MUTED}; line-height: 1.4; margin: 0; }
+  .sc__switch { position: relative; display: inline-flex; flex: 0 0 auto; cursor: pointer; }
+  .sc__switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .sc__switch-track {
+    width: 38px; height: 22px; border-radius: 11px; background: rgba(0,0,0,0.25);
+    position: relative; transition: background 0.15s;
+  }
+  .sc__switch-thumb {
+    position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: transform 0.15s;
+  }
+  .sc__switch input:checked + .sc__switch-track { background: #0969da; }
+  .sc__switch input:checked + .sc__switch-track .sc__switch-thumb { transform: translateX(16px); }
+  .sc__switch input:focus-visible + .sc__switch-track { outline: 2px solid #0969da; outline-offset: 2px; }
 
   @media (prefers-color-scheme: dark) {
     body { background: #0d1117; color: #e6edf3; }
     .st__intro, .st__status, .st__guidance, .sc__sub, .sc__preset-why, .sc__adv-intro, .sc__why,
     .sc__grp-why, .kn__unit, .kn__scale, .sc__role-impact { color: #9198a1; }
     .st__card { background: #161b22; border-color: rgba(255,255,255,0.1); }
-    .st input, .st button, .sc__select, .kn__num, .kn__reset, .sc__seg, .sc__reset-all { border-color: rgba(255,255,255,0.24); }
+    .st input, .st button, .sc__select, .kn__num, .kn__reset, .sc__reset-all { border-color: rgba(255,255,255,0.24); }
     .st__guidance a { color: #4493f8; }
     .sc__preset { border-color: rgba(255,255,255,0.16); }
     .sc__preset--on { border-color: #4493f8; box-shadow: inset 0 0 0 1px #4493f8; }
@@ -147,9 +159,10 @@ const STYLES = `
     .sc__grp[open] .sc__grp-sum { background: rgba(255,255,255,0.03); border-bottom-color: rgba(255,255,255,0.08); }
     .kn + .kn, .sc__role + .sc__role, .sc__policy { border-top-color: rgba(255,255,255,0.07); }
     .kn--custom { background: rgba(68,147,248,0.09); }
-    .kn__dot, .sc__seg-btn--on { background: #1f6feb; }
-    .sc__seg-btn--on { color: #fff; }
+    .kn__dot { background: #1f6feb; }
     .kn__slider { accent-color: #4493f8; }
+    .sc__switch-track { background: rgba(255,255,255,0.2); }
+    .sc__switch input:checked + .sc__switch-track { background: #1f6feb; }
   }
 `
 
@@ -554,30 +567,29 @@ function ScoringCard() {
             <span class="sc__grp-name">What each dimension can do</span>
             <span class="sc__grp-why">Whether a weak result in an area can pull the verdict down.</span>
           </summary>
+          <p class="sc__why sc__role-intro">On = this area can pull a verdict down (full weight). Off = lift-only.</p>
           {DIMENSION_KEYS.map((dim) => {
             const liftOnly = config.additiveDimensions.includes(dim)
+            const role = dimensionRole(liftOnly)
             return (
               <div key={dim} class="sc__role">
-                <span class="sc__role-name">{DIMENSION_LABELS[dim]}</span>
-                <div class="sc__seg" role="group" aria-label={`${DIMENSION_LABELS[dim]} role`}>
-                  <button
-                    type="button"
-                    class={`sc__seg-btn${!liftOnly ? ' sc__seg-btn--on' : ''}`}
-                    aria-pressed={!liftOnly}
-                    onClick={() => void toggleAdditive(dim, false)}
-                  >
-                    Can lower
-                  </button>
-                  <button
-                    type="button"
-                    class={`sc__seg-btn${liftOnly ? ' sc__seg-btn--on' : ''}`}
-                    aria-pressed={liftOnly}
-                    onClick={() => void toggleAdditive(dim, true)}
-                  >
-                    Lift only
-                  </button>
+                <div class="sc__role-body">
+                  <span class="sc__role-name">{DIMENSION_LABELS[dim]}</span>
+                  <span class="sc__role-impact">
+                    {role.label} — {role.impact}.
+                  </span>
                 </div>
-                <span class="sc__role-impact">{dimensionRole(liftOnly).impact}</span>
+                <label class="sc__switch">
+                  <input
+                    type="checkbox"
+                    checked={!liftOnly}
+                    aria-label={`${DIMENSION_LABELS[dim]} can lower the verdict`}
+                    onChange={(e) => void toggleAdditive(dim, !(e.target as HTMLInputElement).checked)}
+                  />
+                  <span class="sc__switch-track" aria-hidden="true">
+                    <span class="sc__switch-thumb" />
+                  </span>
+                </label>
               </div>
             )
           })}
