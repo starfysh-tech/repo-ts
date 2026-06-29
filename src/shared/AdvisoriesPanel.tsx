@@ -38,18 +38,28 @@ function severityCounts(advisories: Advisory[]): { severity: AdvisorySeverity; c
  *  empty-state copy (with `asOf` when present); otherwise a count summary like
  *  "3 known advisories across 142 dependencies — 1 critical, 2 high". */
 export function advisoriesHeadline(result: Extract<AdvisoriesResult, { status: 'ok' }>): string {
-  const { advisories, scanned, asOf } = result
+  const { advisories, scanned } = result
+  // Name the scanned count so a clean result reads as work done, not a no-op. The
+  // "as of" time is shown by the re-check footer, not duplicated here.
+  const depNoun = scanned === 1 ? 'dependency' : 'dependencies'
   if (advisories.length === 0) {
-    // Name the scanned count so a clean result reads as work done, not a no-op.
-    const noun = scanned === 1 ? 'dependency' : 'dependencies'
-    const asOfClause = asOf ? ` (as of ${asOf})` : ''
-    return `${EMPTY_COPY} across ${scanned} ${noun}${asOfClause}.`
+    return `${EMPTY_COPY} across ${scanned} ${depNoun}.`
   }
   const breakdown = severityCounts(advisories)
     .map(({ severity, count }) => `${count} ${severity}`)
     .join(', ')
   const noun = advisories.length === 1 ? 'advisory' : 'advisories'
-  return `${advisories.length} known ${noun} across ${scanned} dependencies — ${breakdown}`
+  return `${advisories.length} known ${noun} across ${scanned} ${depNoun} — ${breakdown}`
+}
+
+/** A short local "pulled" timestamp for an `asOf` ISO string, or '' if absent or
+ *  unparseable. Shown next to Re-check so the user knows how fresh the list is. */
+export function pulledLabel(asOf: string): string {
+  if (!asOf) return ''
+  const d = new Date(asOf)
+  return Number.isNaN(d.getTime())
+    ? ''
+    : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 // Co-located styles (see ConfidenceMeter for the rationale). Classes prefixed
@@ -76,13 +86,15 @@ export const advisoriesPanelStyles = `
   .advisories__sev { font-weight: 600; text-transform: capitalize; }
   .advisories__note { margin: 4px 0 0; font-size: 11px; color: #57606a; line-height: 1.4; }
   .advisories__recheck {
-    margin: 6px 0 0; font-size: 11px; padding: 0; cursor: pointer;
+    font-size: 11px; padding: 0; cursor: pointer;
     border: none; background: transparent; color: inherit; text-decoration: underline;
   }
   .advisories__recheck:disabled { cursor: default; opacity: 0.6; }
+  .advisories__footer { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; }
+  .advisories__pulled { font-size: 11px; color: #57606a; }
   @media (prefers-color-scheme: dark) {
     .advisories__btn { border-color: rgba(255,255,255,0.24); }
-    .advisories__why, .advisories__consent, .advisories__note { color: #9198a1; }
+    .advisories__why, .advisories__consent, .advisories__note, .advisories__pulled { color: #9198a1; }
   }
 `
 
@@ -202,7 +214,7 @@ function ResultView({
     return (
       <div>
         <p class="advisories__headline">{NO_DEP_COPY}</p>
-        {recheck}
+        <div class="advisories__footer">{recheck}</div>
       </div>
     )
   }
@@ -210,7 +222,7 @@ function ResultView({
     return (
       <div>
         <p class="advisories__headline">{UNAVAILABLE_COPY}</p>
-        {recheck}
+        <div class="advisories__footer">{recheck}</div>
       </div>
     )
   }
@@ -249,7 +261,12 @@ function ResultView({
           ))}
         </ul>
       )}
-      {recheck}
+      <div class="advisories__footer">
+        {recheck}
+        {pulledLabel(result.asOf) ? (
+          <span class="advisories__pulled">pulled {pulledLabel(result.asOf)}</span>
+        ) : null}
+      </div>
     </div>
   )
 }
