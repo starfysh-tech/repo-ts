@@ -6,6 +6,7 @@ import {
   EMPTY_COPY,
   EMPTY_SUBNOTE,
   NO_DEP_COPY,
+  pulledLabel,
   UNAVAILABLE_COPY,
 } from './AdvisoriesPanel'
 
@@ -80,5 +81,39 @@ describe('advisoriesHeadline', () => {
   it('uses the singular dependency noun for a single scanned dep', () => {
     const result = { status: 'ok' as const, scanned: 1, asOf: '', advisories: [] }
     expect(advisoriesHeadline(result)).toBe(`${EMPTY_COPY} across 1 dependency.`)
+  })
+})
+
+describe('pulledLabel', () => {
+  const now = new Date('2026-06-29T12:00:00Z')
+  // asOf `ms` before `now`, as an ISO string.
+  const ago = (ms: number) => new Date(now.getTime() - ms).toISOString()
+  const H = 3_600_000
+  const D = 24 * H
+
+  it('returns "" for an absent or unparseable timestamp', () => {
+    expect(pulledLabel('', now)).toBe('')
+    expect(pulledLabel('not-a-date', now)).toBe('')
+  })
+
+  it('reads under an hour as "just now"', () => {
+    expect(pulledLabel(ago(40 * 60_000), now)).toBe('just now')
+  })
+
+  it('reports whole hours up to a day', () => {
+    expect(pulledLabel(ago(5 * H), now)).toBe('5h ago')
+    expect(pulledLabel(ago(23 * H), now)).toBe('23h ago')
+  })
+
+  it('reports whole days through three days', () => {
+    expect(pulledLabel(ago(D), now)).toBe('1d ago')
+    expect(pulledLabel(ago(3 * D), now)).toBe('3d ago')
+  })
+
+  it('switches to an absolute date (no time) after three days', () => {
+    const label = pulledLabel(ago(10 * D), now)
+    expect(label).not.toContain('ago')
+    expect(label).not.toMatch(/\d:\d/) // no clock time
+    expect(label).toContain('2026')
   })
 })

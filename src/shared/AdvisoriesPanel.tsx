@@ -52,14 +52,22 @@ export function advisoriesHeadline(result: Extract<AdvisoriesResult, { status: '
   return `${advisories.length} known ${noun} across ${scanned} ${depNoun} — ${breakdown}`
 }
 
-/** A short local "pulled" timestamp for an `asOf` ISO string, or '' if absent or
- *  unparseable. Shown next to Re-check so the user knows how fresh the list is. */
-export function pulledLabel(asOf: string): string {
+const HOUR_MS = 3_600_000
+const DAY_MS = 24 * HOUR_MS
+
+/** How fresh the advisory list is, relative to `now`: "just now" under an hour,
+ *  then "Nh ago", then "Nd ago" through 3 days, then an absolute date (no time)
+ *  once older than 3 days. '' for an absent or unparseable `asOf`. */
+export function pulledLabel(asOf: string, now: Date): string {
   if (!asOf) return ''
-  const d = new Date(asOf)
-  return Number.isNaN(d.getTime())
-    ? ''
-    : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+  const t = new Date(asOf).getTime()
+  if (Number.isNaN(t)) return ''
+  const ms = now.getTime() - t
+  if (ms < HOUR_MS) return 'just now'
+  if (ms < DAY_MS) return `${Math.floor(ms / HOUR_MS)}h ago`
+  const days = Math.floor(ms / DAY_MS)
+  if (days <= 3) return `${days}d ago`
+  return new Date(t).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 // Co-located styles (see ConfidenceMeter for the rationale). Classes prefixed
@@ -234,6 +242,7 @@ function ResultView({
   const ordered = [...result.advisories].sort(
     (a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity),
   )
+  const pulled = pulledLabel(result.asOf, new Date())
   return (
     <div>
       <p class="advisories__headline">{headline}</p>
@@ -263,9 +272,7 @@ function ResultView({
       )}
       <div class="advisories__footer">
         {recheck}
-        {pulledLabel(result.asOf) ? (
-          <span class="advisories__pulled">pulled {pulledLabel(result.asOf)}</span>
-        ) : null}
+        {pulled ? <span class="advisories__pulled">pulled {pulled}</span> : null}
       </div>
     </div>
   )
