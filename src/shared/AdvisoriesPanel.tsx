@@ -18,7 +18,7 @@ import { getSettings, setAdvisoriesConsentGiven } from './settings'
 // without rendering. These are the user-facing strings the linter cares about.
 export const CONSENT_BODY =
   "Checking sends only this repo's public owner/name to the Repo Trust backend — the first data this extension sends off your device. Nothing else is sent."
-export const EMPTY_COPY = 'No known advisories found in the resolved dependencies'
+export const EMPTY_COPY = 'No known advisories found'
 export const EMPTY_SUBNOTE =
   'Only resolved dependencies were checked, and only against known advisories — a point-in-time result, not a full audit.'
 export const NO_DEP_COPY = 'No resolvable dependency graph to check.'
@@ -40,7 +40,10 @@ function severityCounts(advisories: Advisory[]): { severity: AdvisorySeverity; c
 export function advisoriesHeadline(result: Extract<AdvisoriesResult, { status: 'ok' }>): string {
   const { advisories, scanned, asOf } = result
   if (advisories.length === 0) {
-    return asOf ? `${EMPTY_COPY} (as of ${asOf}).` : `${EMPTY_COPY}.`
+    // Name the scanned count so a clean result reads as work done, not a no-op.
+    const noun = scanned === 1 ? 'dependency' : 'dependencies'
+    const asOfClause = asOf ? ` (as of ${asOf})` : ''
+    return `${EMPTY_COPY} across ${scanned} ${noun}${asOfClause}.`
   }
   const breakdown = severityCounts(advisories)
     .map(({ severity, count }) => `${count} ${severity}`)

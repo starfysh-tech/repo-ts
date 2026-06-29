@@ -67,13 +67,20 @@ describe('advisoriesHeadline', () => {
     expect(advisoriesHeadline(result)).toBe('1 known advisory across 10 dependencies — 1 low')
   })
 
-  it('returns the empty-state copy (with asOf) for zero advisories', () => {
+  it('reports the scanned count (and asOf) for zero advisories', () => {
     const result = { status: 'ok' as const, scanned: 80, asOf: '2026-06-01', advisories: [] }
-    expect(advisoriesHeadline(result)).toBe(`${EMPTY_COPY} (as of 2026-06-01).`)
+    expect(advisoriesHeadline(result)).toBe(
+      `${EMPTY_COPY} across 80 dependencies (as of 2026-06-01).`,
+    )
   })
 
   it('omits the as-of clause when none is provided', () => {
     const result = { status: 'ok' as const, scanned: 80, asOf: '', advisories: [] }
-    expect(advisoriesHeadline(result)).toBe(`${EMPTY_COPY}.`)
+    expect(advisoriesHeadline(result)).toBe(`${EMPTY_COPY} across 80 dependencies.`)
+  })
+
+  it('uses the singular dependency noun for a single scanned dep', () => {
+    const result = { status: 'ok' as const, scanned: 1, asOf: '', advisories: [] }
+    expect(advisoriesHeadline(result)).toBe(`${EMPTY_COPY} across 1 dependency.`)
   })
 })
