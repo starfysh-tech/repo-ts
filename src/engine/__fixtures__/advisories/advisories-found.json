@@ -1,0 +1,42 @@
+{
+  "scanned": 142,
+  "advisories": [
+    {
+      "id": "GHSA-pfrx-2q88-qq97",
+      "source": "GHSA",
+      "severity": "critical",
+      "package": "minimist",
+      "version": "1.2.5",
+      "summary": "Prototype pollution in minimist",
+      "url": "https://osv.dev/vulnerability/GHSA-pfrx-2q88-qq97"
+    },
+    {
+      "id": "GHSA-93q8-gq69-wqmw",
+      "source": "GHSA",
+      "severity": "high",
+      "package": "axios",
+      "version": "0.21.0",
+      "summary": "Server-Side Request Forgery in axios",
+      "url": "https://osv.dev/vulnerability/GHSA-93q8-gq69-wqmw"
+    },
+    {
+      "id": "OSV-2021-1234",
+      "source": "OSV",
+      "severity": "medium",
+      "package": "lodash",
+      "version": "4.17.15",
+      "summary": "ReDoS in lodash",
+      "url": "https://osv.dev/vulnerability/OSV-2021-1234"
+    },
+    {
+      "id": "GHSA-43f8-2h32-f4cj",
+      "source": "GHSA",
+      "severity": "low",
+      "package": "tar",
+      "version": "6.1.0",
+      "summary": "Insufficient symlink protection in tar",
+      "url": "https://osv.dev/vulnerability/GHSA-43f8-2h32-f4cj"
+    }
+  ],
+  "as_of": "2026-06-24T00:00:00Z"
+}

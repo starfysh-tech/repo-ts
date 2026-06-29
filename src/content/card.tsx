@@ -5,6 +5,7 @@ import { recencyLabel } from './recency'
 import { useWatchToggle } from '../shared/useWatchToggle'
 import { ConfidenceMeter } from '../shared/ConfidenceMeter'
 import { PackageSourceAction } from '../shared/PackageSourceAction'
+import { AdvisoriesPanel } from '../shared/AdvisoriesPanel'
 import { TrustDetails } from '../shared/TrustDetails'
 import { ScopeNote } from '../shared/ScopeNote'
 import { Caveats } from '../shared/Caveats'
@@ -92,6 +93,7 @@ function Result({ result: initial, target }: { result: AnalysisResult; target: S
       <ScopeNote />
       <p class="card__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
       <PackageSourceAction target={target} result={result} onResult={setResult} />
+      <AdvisoriesPanel target={target} />
       <TrustDetails result={result} />
     </div>
   )

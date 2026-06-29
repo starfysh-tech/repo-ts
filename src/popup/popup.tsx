@@ -11,6 +11,7 @@ import { Caveats, caveatsStyles } from '../shared/Caveats'
 import { dimensionRowStyles } from '../shared/DimensionRow'
 import { Headline, headlineStyles } from '../shared/Headline'
 import { PackageSourceAction, packageSourceActionStyles } from '../shared/PackageSourceAction'
+import { AdvisoriesPanel, advisoriesPanelStyles } from '../shared/AdvisoriesPanel'
 import { recencyLabel } from '../content/recency'
 import type { AnalysisOutcome, AnalysisResult } from '../engine/types'
 
@@ -37,6 +38,7 @@ const STYLES = `
   ${scopeNoteStyles}
   ${caveatsStyles}
   ${packageSourceActionStyles}
+  ${advisoriesPanelStyles}
 `
 
 const openWatchlist = () =>
@@ -132,6 +134,7 @@ function RepoView({ target, outcome }: { target: SupportedRepo; outcome: Analysi
       <ScopeNote />
       <p class="pp__recency">{recencyLabel(result.analyzed_at, new Date())}</p>
       <PackageSourceAction target={target} result={result} onResult={setResult} />
+      <AdvisoriesPanel target={target} />
       <TrustDetails result={result} />
       <SaveButton target={target} result={result} />
       {repo}
