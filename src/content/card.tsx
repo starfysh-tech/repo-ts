@@ -1,3 +1,4 @@
+import type { ComponentChild } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
 import type { SupportedRepo } from './parseRepoContext'
 import type { AnalysisResult } from '../engine/types'
@@ -21,11 +22,12 @@ export type CardState =
   | { kind: 'private'; target: SupportedRepo }
   | { kind: 'rate_limited'; target: SupportedRepo; resetAt: number }
 
-export function TrustCard({ state }: { state: CardState }) {
+export function TrustCard({ state, header }: { state: CardState; header?: ComponentChild }) {
   // Trust-colored top accent (neutral for the non-verdict states).
   const accent = trustAccent(state.kind === 'result' ? state.result.trust_state : undefined)
   return (
     <section class="card" role="region" aria-label="Repo Trust summary" style={`--accent:${accent}`}>
+      {header}
       {renderBody(state)}
       <p class="card__repo">
         {state.target.owner}/{state.target.repo}
