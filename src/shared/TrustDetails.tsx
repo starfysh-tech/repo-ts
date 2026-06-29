@@ -28,7 +28,7 @@ export const trustDetailsStyles = `
 // known vulnerabilities, dependency risk) is the most security-relevant gap for a
 // pre-install decision, so it carries an explicit "check separately" note.
 const DEFERRED_DIMENSIONS = [
-  { name: 'Supply chain', note: 'package source linkage can be checked on request; malware, known vulnerabilities, and dependency risk are not checked here — assess these separately before installing.' },
+  { name: 'Supply chain', note: 'package source linkage and known vulnerabilities can be checked on request; malware and dependency risk are not checked here — assess these separately before installing.' },
 ] as const
 
 // Collapsible "Trust details": the per-dimension breakdown + the deferred

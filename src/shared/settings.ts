@@ -23,6 +23,10 @@ export interface Settings {
   pat?: string
   scoringPreset?: ScoringPreset
   scoringOverrides?: Partial<ScoringConfig>
+  /** One-time consent gate for the manual "Known advisories" check. The check is
+   *  the first signal to ever leave the device (it calls our backend), so the
+   *  first call is gated on an explicit, persisted opt-in. */
+  advisoriesConsentGiven?: boolean
 }
 
 const KEY = 'settings'
@@ -75,6 +79,7 @@ export async function getSettings(): Promise<Settings> {
   // single seam that validates overrides field-by-field) plus the trimmed token.
   const settings = readSettingsFromRaw(raw)
   if (typeof raw.pat === 'string' && raw.pat.trim()) settings.pat = raw.pat.trim()
+  if (raw.advisoriesConsentGiven === true) settings.advisoriesConsentGiven = true
   return settings
 }
 
@@ -217,4 +222,14 @@ export async function setPat(token: string): Promise<void> {
 /** Remove the PAT, preserving any other settings. */
 export async function clearPat(): Promise<void> {
   await mutateSettings(({ pat: _pat, ...rest }) => rest)
+}
+
+/** Persist (or clear) the one-time advisories consent. Routed through the same
+ *  serialized queue so it can't clobber a concurrent settings write. */
+export async function setAdvisoriesConsentGiven(given: boolean): Promise<void> {
+  if (!given) {
+    await mutateSettings(({ advisoriesConsentGiven: _drop, ...rest }) => rest)
+    return
+  }
+  await mutateSettings((raw) => ({ ...raw, advisoriesConsentGiven: true }))
 }

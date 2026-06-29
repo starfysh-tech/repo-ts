@@ -1,5 +1,6 @@
 import type { SupportedRepo } from '../content/parseRepoContext'
 import type { AnalysisOutcome } from '../engine/types'
+import type { AdvisoriesResult } from '../engine/advisoriesClient'
 
 // Typed content-script ↔ background-worker contract. The worker owns all fetch,
 // scoring, and caching; the content script only asks for an analysis.
@@ -18,7 +19,16 @@ export interface CheckPackageSourceRequest {
   target: SupportedRepo
 }
 
-export type WorkerRequest = AnalyzeRequest | CheckPackageSourceRequest
+/** The manual, on-demand "Known advisories" check. The worker calls OUR backend
+ *  (the first signal to ever leave the device), normalizes the response, and
+ *  replies with an AdvisoriesResult. This is NOT a dimension and never touches
+ *  the maintenance verdict. */
+export interface CheckAdvisoriesRequest {
+  type: 'check-advisories'
+  target: SupportedRepo
+}
+
+export type WorkerRequest = AnalyzeRequest | CheckPackageSourceRequest | CheckAdvisoriesRequest
 
 /** Sent from the content script / popup / watchlist; the worker replies with an
  *  AnalysisOutcome. Resolves `undefined` if the worker never responds (e.g. the
@@ -36,4 +46,11 @@ export function requestAnalysis(
 export function requestPackageSource(target: SupportedRepo): Promise<AnalysisOutcome | undefined> {
   const message: CheckPackageSourceRequest = { type: 'check-package-source', target }
   return chrome.runtime.sendMessage(message) as Promise<AnalysisOutcome | undefined>
+}
+
+/** Run the manual known-advisories check against the backend; resolves to the
+ *  normalized AdvisoriesResult (or `undefined` if the worker never responds). */
+export function requestCheckAdvisories(target: SupportedRepo): Promise<AdvisoriesResult | undefined> {
+  const message: CheckAdvisoriesRequest = { type: 'check-advisories', target }
+  return chrome.runtime.sendMessage(message) as Promise<AdvisoriesResult | undefined>
 }
