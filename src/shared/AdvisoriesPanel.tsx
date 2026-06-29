@@ -34,9 +34,10 @@ function severityCounts(advisories: Advisory[]): { severity: AdvisorySeverity; c
   })).filter((b) => b.count > 0)
 }
 
-/** Pure, testable headline for an `ok` result. For zero advisories it returns the
- *  empty-state copy (with `asOf` when present); otherwise a count summary like
- *  "3 known advisories across 142 dependencies — 1 critical, 2 high". */
+/** Pure, testable headline for an `ok` result. For zero advisories it names the
+ *  scanned count ("No known advisories found across 142 dependencies"); otherwise
+ *  a count summary like "3 known advisories across 142 dependencies — 1 critical,
+ *  2 high". The "as of" time is shown separately by the Re-check footer. */
 export function advisoriesHeadline(result: Extract<AdvisoriesResult, { status: 'ok' }>): string {
   const { advisories, scanned } = result
   // Name the scanned count so a clean result reads as work done, not a no-op. The
