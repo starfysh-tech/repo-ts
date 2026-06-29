@@ -150,9 +150,12 @@ function ConsentGate({ onAllow, onCancel }: { onAllow: () => void; onCancel: () 
   const [pending, setPending] = useState(false)
   const allow = async () => {
     setPending(true)
+    // On success `onAllow` switches the panel to its busy/result phase, which
+    // unmounts this gate — so reset `pending` only on failure, where the gate is
+    // still mounted. (A finally here would set state on an unmounted component.)
     try {
       await onAllow()
-    } finally {
+    } catch {
       setPending(false)
     }
   }

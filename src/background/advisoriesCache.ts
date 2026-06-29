@@ -15,11 +15,21 @@ export function cacheKey(target: SupportedRepo): string {
   return `advisories:${target.owner.toLowerCase()}/${target.repo.toLowerCase()}`
 }
 
+/** Validate untrusted storage at the read seam: an entry from a corrupted write
+ *  or an older schema must never reach the UI as a malformed `AdvisoriesResult`
+ *  (the panel would deref `.advisories` on it and crash). Only the two persisted
+ *  shapes are accepted; anything else is treated as a cache miss. */
+function isCachedResult(v: unknown): v is AdvisoriesResult {
+  if (!v || typeof v !== 'object') return false
+  const r = v as { status?: unknown; advisories?: unknown }
+  if (r.status === 'no_dependency_data') return true
+  return r.status === 'ok' && Array.isArray(r.advisories)
+}
+
 export async function readAdvisoriesCache(target: SupportedRepo): Promise<AdvisoriesResult | null> {
   const key = cacheKey(target)
   const stored = await chrome.storage.local.get(key)
-  const result = stored[key] as AdvisoriesResult | undefined
-  return result ?? null
+  return isCachedResult(stored[key]) ? (stored[key] as AdvisoriesResult) : null
 }
 
 export async function writeAdvisoriesCache(

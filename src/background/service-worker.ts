@@ -156,7 +156,15 @@ chrome.runtime.onMessage.addListener(
             : undefined
     if (!handler) return undefined
 
-    handler.then(sendResponse).catch(() => sendResponse({ status: 'error' }))
+    // A handler rejection must degrade to that handler's own "non-event" shape:
+    // {status:'unavailable'} for advisories (an AdvisoriesResult), {status:'error'}
+    // for the analysis handlers (an AnalysisOutcome). Sending the wrong shape would
+    // crash the advisories panel.
+    handler.then(sendResponse).catch(() =>
+      sendResponse(
+        message?.type === 'check-advisories' ? { status: 'unavailable' } : { status: 'error' },
+      ),
+    )
     return true // keep the message channel open for the async response
   },
 )
