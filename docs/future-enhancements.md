@@ -2,23 +2,21 @@
 
 Scope deliberately cut from the Phase 1 client-only PoC during the design grilling. Each item was a conscious deferral, not an oversight. Captured here so the cuts are recoverable. See `.scratch/repo-trust-extension/PRD.md` for the in-scope build.
 
-## Deferred trust dimensions
-The PoC scores 3 of 7 dimensions. These are shown in the drawer as "not evaluated in this version":
-- **Release discipline** — release cadence, changelog quality, signed/attested releases. Needs the `/releases` call (extra rate-limit cost).
-- **Governance** — maintainer concentration, CODEOWNERS, governance docs. Needs `/contributors` (extra call) and careful thresholds per ecosystem.
-- **Supply-chain** — v1 **shipped** as the manual **"Package source"** dimension (canonical package/repo linkage, npm, transfer-safe; confirmed mismatch → caution). Still deferred: dependency churn, known-vuln/advisory feeds, malware, SBOM/attestation — these need enrichment / external feeds and stay under "Not checked here".
-- **Responsiveness** — issue triage latency, PR review patterns, stale-backlog ratios. Requires many calls and time-series analysis.
+## Trust dimensions (mostly shipped — kept for history)
+The PoC originally scored 3 of 7. Since then **Release discipline**, **Governance**, and **Responsiveness** all shipped as scored dimensions (Phase 2), so the engine now scores **6 automatic** dimensions plus 2 manual checks. What remains deferred:
+- **Supply-chain** — partially shipped: the manual **"Package source"** check (canonical package↔repo linkage, npm, transfer-safe; confirmed mismatch → caution) and the manual **"Known advisories"** cloud check (dependency-graph SBOM → OSV/GHSA, opt-in). **Still deferred:** dependency churn, malware, dependency-risk *scoring*, SBOM/attestation — these stay under "Not checked here".
+- Deeper variants of the shipped dimensions (e.g. signed/attested releases, per-ecosystem governance thresholds, PR-review-latency time series) remain future work.
 
 ## Deferred UI surfaces & features
-- **Settings page** — scoring profile selector (Balanced/Cautious/Minimal) and theme control. PoC hardcodes "Balanced" and follows system theme.
-- **Share summary** — plain-language exportable summary for notes/chat (FR-8 "should"). PoC omits it.
+- ~~**Settings page** — scoring profile selector (Balanced/Cautious/Minimal)~~ — **shipped** (options page with presets + an advanced per-threshold UI). Theme still follows system.
+- **Share summary** — plain-language exportable summary for notes/chat (FR-8 "should"). Still omitted.
 
 ## Deferred platform & infrastructure
-- **Cloud enrichment** and the enrichment/rules/ingestion backend services.
-- **Historical snapshots** (`/history`) and trend/delta analysis.
-- **Advisory & package-registry correlation.**
-- **Chrome Web Store packaging** — listing assets, screenshots, privacy-policy URL, permissions-justification review. PoC is load-unpacked only.
-- **Optional Personal Access Token field** — would lift the unauthenticated 60/hr limit to 5,000/hr, at the cost of storing a user secret (pulls in secret-handling security requirements).
+- **Cloud enrichment** — first slice **shipped**: a Cloudflare Worker backend (`../repo-trust-backend`) powering the manual "Known advisories" check. A broader enrichment/rules/ingestion service remains deferred.
+- **Historical snapshots** (`/history`) and trend/delta analysis. *(deferred)*
+- ~~**Advisory & package-registry correlation**~~ — **shipped** (Known advisories + Package source).
+- **Chrome Web Store packaging** — listing assets, screenshots, privacy-policy URL, permissions-justification review. PoC is load-unpacked only. *(deferred)*
+- ~~**Optional Personal Access Token field**~~ — **shipped** (options page; lifts 60/hr → 5,000/hr, stored locally).
 
 ## Deferred accounts & collaboration
 - User accounts, watchlist sync across devices, team collaboration, shared watchlists.
@@ -32,11 +30,11 @@ The PoC scores 3 of 7 dimensions. These are shown in the drawer as "not evaluate
 - **Simplicity-aware negative downgrade** — detecting "this is a small, finished repo" (size, file count, age) to contextually suppress missing-item negatives. The PoC instead relies on the confidence model to absorb low evidence, with `caution` reserved for archived. This is the more accurate-but-riskier version of the `is-number` guardrail.
 - Numeric score exposure (PoC shows qualitative states only).
 - Per-ecosystem single-maintainer-concentration thresholds.
-- **Manufactured-credibility guard** (from the security critique) — flag the temporally implausible "newly created **and** already highly active" pattern (recent creation date alongside an established release cadence, many contributors, and active triage), a known supply-chain manufactured-trust tell. The engine currently *rewards* this with strong dimension states. Would surface as a contextual note, never `caution`. Scoring-policy change → fixture re-baseline + `is-number` guardrail recheck + `SCORE_VERSION` bump.
-- **Provenance-gated verdict** (from the security critique) — require provenance to be non-weak/non-mixed before a repo can reach `strong_signals`, so a newly-created / personal-account / mixed-provenance repo can't earn the top verdict on activity (and additive) signals alone. Today `deriveTrustState` takes a strong majority of evidenced core dims, so a mixed provenance can still land STRONG. Needs a PRD decision on the exact gate + fixture re-baseline + guardrail recheck + `SCORE_VERSION` bump.
+- ~~**Manufactured-credibility guard**~~ — **shipped** (`SCORE_VERSION` 0.6.0): flags the temporally implausible "newly created **and** already highly active" pattern as a medium caveat (never `caution`), configurable sensitivity/severity.
+- ~~**Provenance-gated verdict**~~ — **shipped** (`SCORE_VERSION` 0.6.0): `strong_signals` now requires provenance itself to be strong, so a newly-created / mixed-provenance repo can't earn the top verdict on activity/additive signals alone.
 
 ## Deferred identity & canonicality
-- **Canonical-source / typosquat verification** — link the repo to the package a user is about to install (registry ↔ repo linkage, confusable-name warnings, "is this the official upstream"). The PoC ships only a passive "confirm the official source" nudge in the `ScopeNote`; real verification needs package-registry data and name-similarity analysis (out of client-only scope → backend/enrichment).
+- **Canonical-source / typosquat verification** — registry↔repo linkage **shipped** as the manual "Package source" check (confirmed mismatch → caution). Still deferred: confusable/typosquat name-similarity warnings (needs name-similarity analysis over the registry namespace).
 - **Ownership-change / takeover signal** — surface a recent maintainer/owner change or suspicious force-push history (a top account-takeover supply-chain vector that a "responsive, active" repo can mask). Needs history/audit data beyond the unauthenticated REST snapshot.
 - **Release & commit attestation** — signed releases / commits, SLSA provenance, Sigstore — the actual security-*posture* signals, none of which the current "Security docs" dimension checks.
 

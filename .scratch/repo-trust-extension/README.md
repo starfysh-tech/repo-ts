@@ -6,7 +6,7 @@ Phase 1 client-only PoC of an MV3 browser extension that shows explainable trust
 - **Backlog:** [`../../docs/future-enhancements.md`](../../docs/future-enhancements.md) — everything deferred from this PoC.
 - **Issues:** [`issues/`](./issues) — the 7 vertical slices, all `done`.
 
-## Current status (2026-06-25)
+## Current status (2026-06-29)
 
 **Phase 1 is built and feature-complete — all 7 issues merged to `main`.** Shipped via 7 PRs:
 
@@ -37,11 +37,16 @@ Suite is **187 tests** (up from 49).
 - **Structured rationale** (PR #21) — the engine emits `rationale_segments` (explicit inline-link slots) and `DimensionRow` renders them directly; the fragile `findWholeWord` label-matching is gone. `SCORE_VERSION` → `0.7.0`.
 - **Package source / Supply-chain v1** (PR #22) — a manual, on-demand 7th dimension checking canonical package↔repo linkage (npm, behind a registry-agnostic `RegistryAdapter` seam). Confirmed impersonation mismatch → `caution` (a 2nd trigger alongside `archived`), made safe by fork-gating + resolving the registry URL through GitHub (transfer/rename redirects). `SCORE_VERSION` → `0.8.0`. v2 backlog: monorepo `workspaces` walking, registries beyond npm. See [`PRD-package-source.md`](./PRD-package-source.md).
 - **Advanced settings redesign** (PR #23) — the scoring dials are grouped into collapsible per-dimension sections; each threshold is a slider + number field with live readout, units, a changed-from-default dot, a per-dial reset, and a stricter/looser hint; "additive vs core" is reframed as a positive `can lower / lift only` toggle. Pure UI. Manifest `0.2.10`.
+- **Cloud enrichment — Known advisories** (PR #24) — the first **cloud** capability and the first signal that leaves the device: a manual, opt-in "Check known advisories" action sends `{owner, repo}` to our **Cloudflare Worker backend** (GitHub dependency-graph SBOM → OSV/GHSA) and renders a separate, source-linked advisory panel behind a one-time consent. Verdict untouched, **no `SCORE_VERSION` bump**. Backend is a sibling repo `../repo-trust-backend` (deployed). See [`PRD-cloud-enrichment.md`](./PRD-cloud-enrichment.md).
+- **Draggable / collapsible card** (PR #25) — the in-page card has a drag handle and a collapse-to-edge tab (the tab itself drags along the edge); collapsed state + position + tab offset persist. Manifest `0.2.11`.
+- **Manual-check feedback** (PR #26) + **state-fallback fix** (PR #27) — both manual checks now visibly resolve (advisories names the scanned count; package source shows a persistent outcome line, de-duplicated from Trust details; long advisory lists are a severity-sorted scroll region; a relative "pulled" timestamp by Re-check). A neutral fallback guards the package-source state→display lookup.
+
+Suite is now **210 tests**. Manifest `0.2.11`; `SCORE_VERSION` `0.8.0` (advisories add no dimension, so no bump).
 
 ### What's left / next
 
-1. **Finish in-browser dogfood QA** *(the standing gate — nothing this session is eye-verified yet)* — the redesigned settings, the "Check package source" button + headline escalation, the rationale inline-links/chips on card + popup; plus the older unchecked states (manufactured-pattern caveats, watchlist save/refresh/remove, SPA repo→repo nav, rate-limit/error/private/loading).
-2. **Backlog** — **cloud enrichment** ([`PRD-cloud-enrichment.md`](./PRD-cloud-enrichment.md) — planning), share, Chrome Web Store packaging.
+1. **Finish in-browser dogfood QA** — eye-verified this session: the manual "Check package source" + "Check known advisories" flows, the advisories panel (consent, list scroll/sort, pulled timestamp), and the draggable/collapsible card. **Still unverified:** the redesigned settings + scoring knobs, rationale inline-links/chips, manufactured-pattern caveats, watchlist save/refresh/remove, SPA repo→repo nav, and the rate-limit/error/private/loading states.
+2. **Backlog** — share summary, **Chrome Web Store packaging** (listing assets, screenshots, privacy-policy URL, permissions justification); cloud-enrichment v2 (malware/dependency-risk still "Not checked here"); monorepo `workspaces` walking + registries beyond npm for package source.
 
 ## How issues were worked
 
