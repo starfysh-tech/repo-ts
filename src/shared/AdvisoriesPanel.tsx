@@ -65,7 +65,13 @@ export const advisoriesPanelStyles = `
   .advisories__consent { margin: 6px 0 0; font-size: 11px; color: #57606a; line-height: 1.4; }
   .advisories__consent-actions { display: flex; gap: 8px; margin-top: 6px; }
   .advisories__headline { margin: 6px 0 0; font-size: 12px; font-weight: 600; }
-  .advisories__list { margin: 6px 0 0; padding: 0; list-style: none; }
+  /* Bound a long list to its own scroll region so it can't push the card past the
+     viewport; the count headline above stays visible and the rest of the card
+     (Trust details) stays reachable. */
+  .advisories__list {
+    margin: 6px 0 0; padding: 0 6px 0 0; list-style: none;
+    max-height: 220px; overflow-y: auto; overscroll-behavior: contain;
+  }
   .advisories__item { margin-top: 4px; font-size: 11px; line-height: 1.4; }
   .advisories__sev { font-weight: 600; text-transform: capitalize; }
   .advisories__note { margin: 4px 0 0; font-size: 11px; color: #57606a; line-height: 1.4; }
@@ -211,14 +217,19 @@ function ResultView({
 
   // status === 'ok'
   const headline = advisoriesHeadline(result)
+  // Most-severe first, so criticals/highs sit at the top of the scroll region
+  // rather than wherever the backend happened to return them.
+  const ordered = [...result.advisories].sort(
+    (a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity),
+  )
   return (
     <div>
       <p class="advisories__headline">{headline}</p>
-      {result.advisories.length === 0 ? (
+      {ordered.length === 0 ? (
         <p class="advisories__note">{EMPTY_SUBNOTE}</p>
       ) : (
         <ul class="advisories__list">
-          {result.advisories.map((a) => (
+          {ordered.map((a) => (
             <li key={a.id} class="advisories__item">
               <span class="advisories__sev">{a.severity}</span>
               {' · '}
