@@ -86,9 +86,13 @@ export function CardShell({ state }: { state: CardState }) {
   const hostEl = (): HTMLElement | undefined =>
     (rootRef.current?.getRootNode() as ShadowRoot | null)?.host as HTMLElement | undefined
 
+  // Serialize the read-modify-write through a queue so rapid interactions (drag
+  // commit + collapse toggle firing close together) can't interleave get→set and
+  // drop a field — mirrors the `mutateSettings` write queue in settings.ts.
+  const writeQueue = useRef<Promise<void>>(Promise.resolve())
   const persist = (patch: StoredChrome): void => {
-    void chrome.storage.local
-      .get(CHROME_KEY)
+    writeQueue.current = writeQueue.current
+      .then(() => chrome.storage.local.get(CHROME_KEY))
       .then((s) => {
         const cur = (s[CHROME_KEY] as StoredChrome | undefined) ?? {}
         return chrome.storage.local.set({ [CHROME_KEY]: { ...cur, ...patch } })
@@ -191,8 +195,8 @@ export function CardShell({ state }: { state: CardState }) {
     }
     if (!d.moved) return
     const r = host.getBoundingClientRect()
-    host.style.left = `${clamp(d.ox + (e.clientX - d.sx), window.innerWidth - r.width)}px`
-    host.style.top = `${clamp(d.oy + (e.clientY - d.sy), window.innerHeight - r.height)}px`
+    host.style.left = `${clamp(d.ox + (e.clientX - d.sx), window.innerWidth - (r.width || CARD_W))}px`
+    host.style.top = `${clamp(d.oy + (e.clientY - d.sy), window.innerHeight - (r.height || TAB_H))}px`
     host.style.right = 'auto'
     host.style.transform = 'none'
   }
@@ -224,7 +228,7 @@ export function CardShell({ state }: { state: CardState }) {
     if (!d || !host) return
     if (Math.abs(e.clientY - d.sy) > DRAG_THRESHOLD) d.moved = true
     if (!d.moved) return
-    const h = host.getBoundingClientRect().height
+    const h = host.getBoundingClientRect().height || TAB_H
     host.style.top = `${clamp(d.oy + (e.clientY - d.sy), window.innerHeight - h)}px`
     host.style.right = '0px'
     host.style.left = 'auto'
