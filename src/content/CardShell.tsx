@@ -3,10 +3,11 @@ import { TrustCard, type CardState } from './card'
 import { trustAccent } from '../shared/display'
 
 // Chrome around the in-page card: a drag handle to reposition the floating host,
-// and a collapse-to-edge tab. Both the collapsed state and the dragged position
-// persist so the choice survives navigation. This component owns the *host*
-// (the fixed <div> outside the Shadow DOM) — it reaches it via the shadow root's
-// `.host`, so no element has to be threaded down from mount.
+// and a collapse-to-edge tab that is itself draggable along the edge. Collapsed
+// state, card position, and tab offset all persist so the choice survives
+// navigation. This component owns the *host* (the fixed <div> outside the Shadow
+// DOM) — it reaches it via the shadow root's `.host`, so no element has to be
+// threaded down from mount.
 
 const CHROME_KEY = 'repo-trust:card-chrome'
 
@@ -18,9 +19,18 @@ interface StoredChrome {
   tabY?: number
 }
 
-// Keep at least this much of the card on-screen after a drag or a viewport
-// resize, so the handle can always be grabbed again.
-const MIN_VISIBLE = 48
+// Fallback dimensions, used only when getBoundingClientRect reads 0 (host not yet
+// laid out); the real measured size is preferred whenever it is available.
+const CARD_W = 260
+const TAB_H = 44
+// A drag must exceed this many px before it counts as a move (vs a click/tap).
+const DRAG_THRESHOLD = 4
+
+/** Clamp a coordinate so the element stays fully within [0, max]. `max` is floored
+ *  at 0 so an element larger than the viewport pins to the top/left edge rather
+ *  than going negative. One definition of "on-screen", shared by every drag and
+ *  the apply effect, so they can't drift apart. */
+const clamp = (v: number, max: number): number => Math.max(0, Math.min(v, Math.max(0, max)))
 
 export const cardShellStyles = `
   .rt-shell { position: relative; }
@@ -69,6 +79,7 @@ export function CardShell({ state }: { state: CardState }) {
   const [collapsed, setCollapsed] = useState(false)
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const [tabY, setTabY] = useState<number | null>(null)
+  const [loaded, setLoaded] = useState(false)
   const accent = trustAccent(state.kind === 'result' ? state.result.trust_state : undefined)
 
   // The fixed host div that owns our position (shadow root → .host).
@@ -85,7 +96,11 @@ export function CardShell({ state }: { state: CardState }) {
       .catch(() => {})
   }
 
-  // Load the persisted chrome once on mount.
+  // Load the persisted chrome once. `loaded` gates first paint (the host starts
+  // visibility:hidden in mount.tsx) so the card reveals at its saved position
+  // instead of flashing at the default spot first. `finally` flips `loaded` even
+  // when there's nothing stored or the read fails, so the card can never stay
+  // hidden.
   useEffect(() => {
     let live = true
     void chrome.storage.local
@@ -99,24 +114,30 @@ export function CardShell({ state }: { state: CardState }) {
         if (typeof v.tabY === 'number') setTabY(v.tabY)
       })
       .catch(() => {})
+      .finally(() => {
+        if (live) setLoaded(true)
+      })
     return () => {
       live = false
     }
   }, [])
 
-  // Apply collapsed/position to the host. Clamp a saved position into the current
-  // viewport so a resize can't strand the card off-screen.
+  // Apply collapsed/position to the host, keeping the whole element on-screen.
   useEffect(() => {
     const host = hostEl()
     if (!host) return
     const s = host.style
+    if (!loaded) {
+      s.visibility = 'hidden'
+      return
+    }
+    s.visibility = 'visible'
     if (collapsed) {
       s.left = 'auto'
       s.right = '0px'
       if (tabY != null) {
-        // Clamp the saved edge offset so a resize can't push the tab off-screen.
-        const h = host.getBoundingClientRect().height || 44
-        s.top = `${Math.max(0, Math.min(tabY, window.innerHeight - Math.min(h, MIN_VISIBLE)))}px`
+        const h = host.getBoundingClientRect().height || TAB_H
+        s.top = `${clamp(tabY, window.innerHeight - h)}px`
         s.transform = 'none'
       } else {
         s.top = '50%'
@@ -126,18 +147,16 @@ export function CardShell({ state }: { state: CardState }) {
     }
     s.transform = 'none'
     if (pos) {
-      const w = host.getBoundingClientRect().width || 260
-      const x = Math.max(0, Math.min(pos.x, window.innerWidth - MIN_VISIBLE))
-      const y = Math.max(0, Math.min(pos.y, window.innerHeight - MIN_VISIBLE))
-      s.left = `${Math.min(x, window.innerWidth - Math.min(w, MIN_VISIBLE))}px`
-      s.top = `${y}px`
+      const r = host.getBoundingClientRect()
+      s.left = `${clamp(pos.x, window.innerWidth - (r.width || CARD_W))}px`
+      s.top = `${clamp(pos.y, window.innerHeight - (r.height || TAB_H))}px`
       s.right = 'auto'
     } else {
       s.left = 'auto'
       s.right = '16px'
       s.top = '72px'
     }
-  }, [collapsed, pos, tabY])
+  }, [collapsed, pos, tabY, loaded])
 
   const collapse = (): void => {
     setCollapsed(true)
@@ -148,14 +167,18 @@ export function CardShell({ state }: { state: CardState }) {
     persist({ collapsed: false })
   }
 
-  // Pointer-drag the host. We mutate host.style live during the drag (no React
-  // churn) and commit the final position to state + storage on release.
-  const drag = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null)
+  // Pointer-drag the host. We mutate host.style live during the drag (no re-render)
+  // and commit on release — but only once the pointer has actually moved, so a
+  // plain click on the handle never converts the responsive right-anchor into an
+  // absolute position.
+  const drag = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(
+    null,
+  )
   const onPointerDown = (e: PointerEvent): void => {
     const host = hostEl()
     if (!host) return
     const r = host.getBoundingClientRect()
-    drag.current = { sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top }
+    drag.current = { sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top, moved: false }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     e.preventDefault()
   }
@@ -163,11 +186,13 @@ export function CardShell({ state }: { state: CardState }) {
     const d = drag.current
     const host = hostEl()
     if (!d || !host) return
+    if (Math.abs(e.clientX - d.sx) > DRAG_THRESHOLD || Math.abs(e.clientY - d.sy) > DRAG_THRESHOLD) {
+      d.moved = true
+    }
+    if (!d.moved) return
     const r = host.getBoundingClientRect()
-    const x = Math.max(0, Math.min(d.ox + (e.clientX - d.sx), window.innerWidth - r.width))
-    const y = Math.max(0, Math.min(d.oy + (e.clientY - d.sy), window.innerHeight - r.height))
-    host.style.left = `${x}px`
-    host.style.top = `${y}px`
+    host.style.left = `${clamp(d.ox + (e.clientX - d.sx), window.innerWidth - r.width)}px`
+    host.style.top = `${clamp(d.oy + (e.clientY - d.sy), window.innerHeight - r.height)}px`
     host.style.right = 'auto'
     host.style.transform = 'none'
   }
@@ -175,59 +200,55 @@ export function CardShell({ state }: { state: CardState }) {
     const d = drag.current
     const host = hostEl()
     drag.current = null
-    if (!d || !host) return
+    if (!d || !host || !d.moved) return
     const r = host.getBoundingClientRect()
     const next = { x: r.left, y: r.top }
     setPos(next)
     persist(next)
   }
 
-  // The collapsed tab is draggable vertically along the right edge. A small
-  // movement threshold distinguishes a reposition from a tap: a tap (no real
-  // movement) still expands; a drag commits a new edge offset and suppresses the
-  // expand-on-click that would otherwise fire.
-  const tabDrag = useRef<{ sy: number; oy: number } | null>(null)
-  // Survives past onTabUp (which clears tabDrag) so the trailing onClick can tell
-  // a completed drag from a tap. Reset on the next pointerdown.
-  const tabMoved = useRef(false)
+  // The collapsed tab drags vertically along the right edge; a tap (no real
+  // movement) expands. Expansion fires on pointer-up / keyboard — not a trailing
+  // synthetic click — so a pointercancel can't strand a flag that swallows the
+  // next keyboard activation.
+  const tabDrag = useRef<{ sy: number; oy: number; moved: boolean } | null>(null)
   const onTabDown = (e: PointerEvent): void => {
     const host = hostEl()
     if (!host) return
-    tabMoved.current = false
-    tabDrag.current = { sy: e.clientY, oy: host.getBoundingClientRect().top }
+    tabDrag.current = { sy: e.clientY, oy: host.getBoundingClientRect().top, moved: false }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
   const onTabMove = (e: PointerEvent): void => {
     const d = tabDrag.current
     const host = hostEl()
     if (!d || !host) return
-    const dy = e.clientY - d.sy
-    if (Math.abs(dy) > 4) tabMoved.current = true
-    if (!tabMoved.current) return
+    if (Math.abs(e.clientY - d.sy) > DRAG_THRESHOLD) d.moved = true
+    if (!d.moved) return
     const h = host.getBoundingClientRect().height
-    const y = Math.max(0, Math.min(d.oy + dy, window.innerHeight - h))
-    host.style.top = `${y}px`
+    host.style.top = `${clamp(d.oy + (e.clientY - d.sy), window.innerHeight - h)}px`
     host.style.right = '0px'
     host.style.left = 'auto'
     host.style.transform = 'none'
   }
-  const onTabUp = (): void => {
+  // pointerup expands a tap; pointercancel just ends the gesture (no expand).
+  const finishTab = (expandOnTap: boolean): void => {
     const d = tabDrag.current
     const host = hostEl()
     tabDrag.current = null
-    if (!d || !host || !tabMoved.current) return // a tap falls through to onClick → expand
-    const y = host.getBoundingClientRect().top
-    setTabY(y)
-    persist({ tabY: y })
-  }
-  // `onClick` fires after the pointer sequence (and on keyboard Enter/Space, so the
-  // tab stays operable without a pointer); skip it when that sequence was a drag.
-  const onTabClick = (): void => {
-    if (tabMoved.current) {
-      tabMoved.current = false
-      return
+    if (!d || !host) return
+    if (d.moved) {
+      const y = host.getBoundingClientRect().top
+      setTabY(y)
+      persist({ tabY: y })
+    } else if (expandOnTap) {
+      expand()
     }
-    expand()
+  }
+  const onTabKeyDown = (e: KeyboardEvent): void => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      expand()
+    }
   }
 
   const bar = (
@@ -265,9 +286,9 @@ export function CardShell({ state }: { state: CardState }) {
         aria-label="Expand Repo Trust panel (drag to reposition)"
         onPointerDown={onTabDown}
         onPointerMove={onTabMove}
-        onPointerUp={onTabUp}
-        onPointerCancel={onTabUp}
-        onClick={onTabClick}
+        onPointerUp={() => finishTab(true)}
+        onPointerCancel={() => finishTab(false)}
+        onKeyDown={onTabKeyDown}
       >
         <span class="rt-tab__dot" aria-hidden="true" />
         <span class="rt-tab__chev" aria-hidden="true">

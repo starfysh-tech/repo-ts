@@ -72,7 +72,9 @@ function ensureHost(): HTMLDivElement {
   if (container) return container
   host = document.createElement('div')
   host.id = HOST_ID
-  host.style.cssText = 'position:fixed;top:72px;right:16px;z-index:2147483646;'
+  // Starts hidden; CardShell reveals it once the persisted position/collapsed
+  // state has loaded, so the card can't flash at the default spot first.
+  host.style.cssText = 'position:fixed;top:72px;right:16px;z-index:2147483646;visibility:hidden;'
   const shadow = host.attachShadow({ mode: 'open' })
   const style = document.createElement('style')
   style.textContent = STYLES
