@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks'
 import type { AnalysisResult } from '../engine/types'
 import type { SupportedRepo } from '../content/parseRepoContext'
 import { requestPackageSource } from './messages'
+import { rationaleText } from '../engine/rationale'
+import { DIM_ACCENT, DIM_DISPLAY } from './display'
 
 // Co-located styles (see ConfidenceMeter for the rationale).
 export const packageSourceActionStyles = `
@@ -13,6 +15,8 @@ export const packageSourceActionStyles = `
   .pkgsrc__btn:disabled { cursor: default; opacity: 0.6; }
   .pkgsrc__why { margin: 4px 0 0; font-size: 11px; color: #57606a; line-height: 1.4; }
   .pkgsrc__note { margin: 4px 0 0; font-size: 11px; color: #9a6700; }
+  .pkgsrc__result { margin: 6px 0 0; font-size: 12px; line-height: 1.4; }
+  .pkgsrc__result-icon { font-weight: 600; }
   @media (prefers-color-scheme: dark) {
     .pkgsrc__btn { border-color: rgba(255,255,255,0.24); }
     .pkgsrc__why { color: #9198a1; }
@@ -20,8 +24,8 @@ export const packageSourceActionStyles = `
   }
 `
 
-const alreadyChecked = (result: AnalysisResult) =>
-  (result.dimension_results ?? []).some((d) => d.dimension_key === 'package_source')
+const packageSourceDimension = (result: AnalysisResult) =>
+  (result.dimension_results ?? []).find((d) => d.dimension_key === 'package_source')
 
 /**
  * The manual, on-demand "Package source" check. Renders a button (the heavier
@@ -41,7 +45,27 @@ export function PackageSourceAction({
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
 
-  if (alreadyChecked(result)) return null
+  // Once checked, the result is folded into the verdict — show a persistent
+  // outcome line (icon + rationale) here too, so the check visibly resolves
+  // instead of the button silently vanishing.
+  const checked = packageSourceDimension(result)
+  if (checked) {
+    const display = DIM_DISPLAY[checked.dimension_state]
+    return (
+      <div class="pkgsrc">
+        <p class="pkgsrc__result">
+          <span
+            class="pkgsrc__result-icon"
+            style={`color:${DIM_ACCENT[checked.dimension_state]}`}
+            aria-hidden="true"
+          >
+            {display.icon}
+          </span>{' '}
+          {rationaleText(checked.rationale_segments)}
+        </p>
+      </div>
+    )
+  }
 
   const run = async () => {
     setBusy(true)

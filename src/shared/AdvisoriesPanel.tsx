@@ -18,7 +18,7 @@ import { getSettings, setAdvisoriesConsentGiven } from './settings'
 // without rendering. These are the user-facing strings the linter cares about.
 export const CONSENT_BODY =
   "Checking sends only this repo's public owner/name to the Repo Trust backend — the first data this extension sends off your device. Nothing else is sent."
-export const EMPTY_COPY = 'No known advisories found in the resolved dependencies'
+export const EMPTY_COPY = 'No known advisories found'
 export const EMPTY_SUBNOTE =
   'Only resolved dependencies were checked, and only against known advisories — a point-in-time result, not a full audit.'
 export const NO_DEP_COPY = 'No resolvable dependency graph to check.'
@@ -34,19 +34,41 @@ function severityCounts(advisories: Advisory[]): { severity: AdvisorySeverity; c
   })).filter((b) => b.count > 0)
 }
 
-/** Pure, testable headline for an `ok` result. For zero advisories it returns the
- *  empty-state copy (with `asOf` when present); otherwise a count summary like
- *  "3 known advisories across 142 dependencies — 1 critical, 2 high". */
+/** Pure, testable headline for an `ok` result. For zero advisories it names the
+ *  scanned count ("No known advisories found across 142 dependencies"); otherwise
+ *  a count summary like "3 known advisories across 142 dependencies — 1 critical,
+ *  2 high". The "as of" time is shown separately by the Re-check footer. */
 export function advisoriesHeadline(result: Extract<AdvisoriesResult, { status: 'ok' }>): string {
-  const { advisories, scanned, asOf } = result
+  const { advisories, scanned } = result
+  // Name the scanned count so a clean result reads as work done, not a no-op. The
+  // "as of" time is shown by the re-check footer, not duplicated here.
+  const depNoun = scanned === 1 ? 'dependency' : 'dependencies'
   if (advisories.length === 0) {
-    return asOf ? `${EMPTY_COPY} (as of ${asOf}).` : `${EMPTY_COPY}.`
+    return `${EMPTY_COPY} across ${scanned} ${depNoun}.`
   }
   const breakdown = severityCounts(advisories)
     .map(({ severity, count }) => `${count} ${severity}`)
     .join(', ')
   const noun = advisories.length === 1 ? 'advisory' : 'advisories'
-  return `${advisories.length} known ${noun} across ${scanned} dependencies — ${breakdown}`
+  return `${advisories.length} known ${noun} across ${scanned} ${depNoun} — ${breakdown}`
+}
+
+const HOUR_MS = 3_600_000
+const DAY_MS = 24 * HOUR_MS
+
+/** How fresh the advisory list is, relative to `now`: "just now" under an hour,
+ *  then "Nh ago", then "Nd ago" through 3 days, then an absolute date (no time)
+ *  once older than 3 days. '' for an absent or unparseable `asOf`. */
+export function pulledLabel(asOf: string, now: Date): string {
+  if (!asOf) return ''
+  const t = new Date(asOf).getTime()
+  if (Number.isNaN(t)) return ''
+  const ms = now.getTime() - t
+  if (ms < HOUR_MS) return 'just now'
+  if (ms < DAY_MS) return `${Math.floor(ms / HOUR_MS)}h ago`
+  const days = Math.floor(ms / DAY_MS)
+  if (days <= 3) return `${days}d ago`
+  return new Date(t).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 // Co-located styles (see ConfidenceMeter for the rationale). Classes prefixed
@@ -62,18 +84,26 @@ export const advisoriesPanelStyles = `
   .advisories__consent { margin: 6px 0 0; font-size: 11px; color: #57606a; line-height: 1.4; }
   .advisories__consent-actions { display: flex; gap: 8px; margin-top: 6px; }
   .advisories__headline { margin: 6px 0 0; font-size: 12px; font-weight: 600; }
-  .advisories__list { margin: 6px 0 0; padding: 0; list-style: none; }
+  /* Bound a long list to its own scroll region so it can't push the card past the
+     viewport; the count headline above stays visible and the rest of the card
+     (Trust details) stays reachable. */
+  .advisories__list {
+    margin: 6px 0 0; padding: 0 6px 0 0; list-style: none;
+    max-height: 220px; overflow-y: auto; overscroll-behavior: contain;
+  }
   .advisories__item { margin-top: 4px; font-size: 11px; line-height: 1.4; }
   .advisories__sev { font-weight: 600; text-transform: capitalize; }
   .advisories__note { margin: 4px 0 0; font-size: 11px; color: #57606a; line-height: 1.4; }
   .advisories__recheck {
-    margin: 6px 0 0; font-size: 11px; padding: 0; cursor: pointer;
+    font-size: 11px; padding: 0; cursor: pointer;
     border: none; background: transparent; color: inherit; text-decoration: underline;
   }
   .advisories__recheck:disabled { cursor: default; opacity: 0.6; }
+  .advisories__footer { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; }
+  .advisories__pulled { font-size: 11px; color: #57606a; }
   @media (prefers-color-scheme: dark) {
     .advisories__btn { border-color: rgba(255,255,255,0.24); }
-    .advisories__why, .advisories__consent, .advisories__note { color: #9198a1; }
+    .advisories__why, .advisories__consent, .advisories__note, .advisories__pulled { color: #9198a1; }
   }
 `
 
@@ -193,7 +223,7 @@ function ResultView({
     return (
       <div>
         <p class="advisories__headline">{NO_DEP_COPY}</p>
-        {recheck}
+        <div class="advisories__footer">{recheck}</div>
       </div>
     )
   }
@@ -201,21 +231,27 @@ function ResultView({
     return (
       <div>
         <p class="advisories__headline">{UNAVAILABLE_COPY}</p>
-        {recheck}
+        <div class="advisories__footer">{recheck}</div>
       </div>
     )
   }
 
   // status === 'ok'
   const headline = advisoriesHeadline(result)
+  // Most-severe first, so criticals/highs sit at the top of the scroll region
+  // rather than wherever the backend happened to return them.
+  const ordered = [...result.advisories].sort(
+    (a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity),
+  )
+  const pulled = pulledLabel(result.asOf, new Date())
   return (
     <div>
       <p class="advisories__headline">{headline}</p>
-      {result.advisories.length === 0 ? (
+      {ordered.length === 0 ? (
         <p class="advisories__note">{EMPTY_SUBNOTE}</p>
       ) : (
         <ul class="advisories__list">
-          {result.advisories.map((a) => (
+          {ordered.map((a) => (
             <li key={a.id} class="advisories__item">
               <span class="advisories__sev">{a.severity}</span>
               {' · '}
@@ -235,7 +271,10 @@ function ResultView({
           ))}
         </ul>
       )}
-      {recheck}
+      <div class="advisories__footer">
+        {recheck}
+        {pulled ? <span class="advisories__pulled">pulled {pulled}</span> : null}
+      </div>
     </div>
   )
 }

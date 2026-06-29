@@ -51,9 +51,14 @@ export function TrustDetails({ result }: { result: AnalysisResult }) {
       </button>
       {open && (
         <div class="details__body">
-          {(result.dimension_results ?? []).map((dim) => (
-            <DimensionRow key={dim.dimension_key} dim={dim} />
-          ))}
+          {/* package_source is the manual check's own concern — it renders a
+              dedicated outcome line in PackageSourceAction, so exclude it here to
+              avoid showing the same finding twice. */}
+          {(result.dimension_results ?? [])
+            .filter((dim) => dim.dimension_key !== 'package_source')
+            .map((dim) => (
+              <DimensionRow key={dim.dimension_key} dim={dim} />
+            ))}
           <h3 class="details__subtitle">Not checked here</h3>
           <ul class="details__deferred">
             {DEFERRED_DIMENSIONS.map(({ name, note }) => (
