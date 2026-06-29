@@ -132,7 +132,14 @@ async function handleCheckPackageSource(target: SupportedRepo): Promise<Analysis
 async function handleCheckAdvisories(target: SupportedRepo): Promise<AdvisoriesResult> {
   const result = await fetchAdvisories({ fetch: backendAdvisoriesFetch }, target)
   if (result.status === 'ok' || result.status === 'no_dependency_data') {
-    await writeAdvisoriesCache(target, result)
+    // A cache-write failure (e.g. storage quota) must never discard a result we
+    // already hold, nor escape to the shared .catch — which would reply with
+    // {status:'error'}, an invalid AdvisoriesResult that crashes the panel.
+    try {
+      await writeAdvisoriesCache(target, result)
+    } catch {
+      // best-effort cache; return the live result regardless
+    }
   }
   return result
 }

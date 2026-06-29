@@ -76,6 +76,20 @@ describe('fetchAdvisories', () => {
     expect(r.advisories[0]).toMatchObject({ id: 'OSV-X', source: 'OSV', severity: 'low' })
   })
 
+  it('6a2: a non-https url (javascript:/http:) is dropped to "" so no hostile href can render', async () => {
+    const data = {
+      advisories: [
+        { id: 'A', url: 'javascript:alert(1)' },
+        { id: 'B', url: 'http://osv.dev/x' },
+        { id: 'C', url: 'https://osv.dev/ok' },
+      ],
+    }
+    const r = await fetchAdvisories(deps(okFetch(data)), target)
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.advisories.map((a) => a.url)).toEqual(['', '', 'https://osv.dev/ok'])
+  })
+
   it('6b: scanned falls back to survivor count when not a finite number; asOf defaults to empty', async () => {
     const data = {
       scanned: 'lots', // not a number → fall back to advisories.length

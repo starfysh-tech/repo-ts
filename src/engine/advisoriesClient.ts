@@ -50,6 +50,12 @@ const SEVERITIES: readonly AdvisorySeverity[] = ['critical', 'high', 'medium', '
 
 const asString = (v: unknown): string => (typeof v === 'string' ? v : '')
 
+/** Only an `https:` URL survives; anything else (incl. `javascript:`/`http:`)
+ *  becomes '' so a compromised backend can't slip a hostile link into a rendered
+ *  `href`. Defense-in-depth on top of the extension's MV3 CSP. */
+const asHttpsUrl = (v: unknown): string =>
+  typeof v === 'string' && /^https:\/\//i.test(v.trim()) ? v.trim() : ''
+
 /** Coerce one untrusted backend row into a typed `Advisory`, or `null` to drop
  *  it. The only hard requirement is a non-empty `id`; everything else falls back
  *  to a safe default so a single malformed field never sinks the row. */
@@ -64,7 +70,7 @@ function normalizeAdvisory(raw: unknown): Advisory | null {
     package: asString(r.package),
     version: asString(r.version),
     summary: asString(r.summary),
-    url: asString(r.url),
+    url: asHttpsUrl(r.url),
   }
 }
 
