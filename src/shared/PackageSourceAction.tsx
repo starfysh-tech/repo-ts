@@ -3,7 +3,7 @@ import type { AnalysisResult } from '../engine/types'
 import type { SupportedRepo } from '../content/parseRepoContext'
 import { requestPackageSource } from './messages'
 import { rationaleText } from '../engine/rationale'
-import { DIM_ACCENT, DIM_DISPLAY } from './display'
+import { DIM_ACCENT, DIM_DISPLAY, NEUTRAL_ACCENT } from './display'
 
 // Co-located styles (see ConfidenceMeter for the rationale).
 export const packageSourceActionStyles = `
@@ -50,15 +50,14 @@ export function PackageSourceAction({
   // instead of the button silently vanishing.
   const checked = packageSourceDimension(result)
   if (checked) {
-    const display = DIM_DISPLAY[checked.dimension_state]
+    // Neutral fallback for an unexpected/corrupted dimension_state, matching
+    // DimensionRow — an old-schema cached result must degrade, not crash.
+    const display = DIM_DISPLAY[checked.dimension_state] ?? { icon: '?', label: 'Unknown' }
+    const accent = DIM_ACCENT[checked.dimension_state] ?? NEUTRAL_ACCENT
     return (
       <div class="pkgsrc">
         <p class="pkgsrc__result">
-          <span
-            class="pkgsrc__result-icon"
-            style={`color:${DIM_ACCENT[checked.dimension_state]}`}
-            aria-hidden="true"
-          >
+          <span class="pkgsrc__result-icon" style={`color:${accent}`} aria-hidden="true">
             {display.icon}
           </span>{' '}
           {rationaleText(checked.rationale_segments)}
