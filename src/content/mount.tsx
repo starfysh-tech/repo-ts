@@ -1,5 +1,6 @@
 import { render } from 'preact'
-import { TrustCard, type CardState } from './card'
+import { type CardState } from './card'
+import { CardShell, cardShellStyles } from './CardShell'
 import { confidenceMeterStyles } from '../shared/ConfidenceMeter'
 import { dimensionRowStyles } from '../shared/DimensionRow'
 import { trustDetailsStyles } from '../shared/TrustDetails'
@@ -58,6 +59,7 @@ const STYLES = `
   ${caveatsStyles}
   ${packageSourceActionStyles}
   ${advisoriesPanelStyles}
+  ${cardShellStyles}
 `
 
 // Single mounted host for the in-page UI. Tracking the host and its Preact
@@ -70,7 +72,9 @@ function ensureHost(): HTMLDivElement {
   if (container) return container
   host = document.createElement('div')
   host.id = HOST_ID
-  host.style.cssText = 'position:fixed;top:72px;right:16px;z-index:2147483646;'
+  // Starts hidden; CardShell reveals it once the persisted position/collapsed
+  // state has loaded, so the card can't flash at the default spot first.
+  host.style.cssText = 'position:fixed;top:72px;right:16px;z-index:2147483646;visibility:hidden;'
   const shadow = host.attachShadow({ mode: 'open' })
   const style = document.createElement('style')
   style.textContent = STYLES
@@ -81,7 +85,7 @@ function ensureHost(): HTMLDivElement {
 }
 
 export function showCard(state: CardState): void {
-  render(<TrustCard state={state} />, ensureHost())
+  render(<CardShell state={state} />, ensureHost())
 }
 
 export function hideCard(): void {
